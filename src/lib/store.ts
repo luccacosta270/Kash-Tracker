@@ -37,18 +37,27 @@ function buildAutoLoggedTransactions(
   targetMonthKey: string,
 ): Transaction[] {
   const targetDate = `${targetMonthKey}-01`;
+  const autoLoggedTransactions: Transaction[] = [];
 
-  return categories
-    .filter(category => (category.isFixed || category.isSavings) && category.planned > 0)
-    .filter(category => !existingTransactions.some(transaction => transaction.date.startsWith(targetMonthKey) && transaction.categoryId === category.id && transaction.type === 'expense'))
-    .map(category => ({
+  categories.forEach(category => {
+    const shouldAutoLog = (category.isFixed || category.isSavings) && category.planned > 0;
+    const alreadyExists = existingTransactions.some(
+      transaction => transaction.date.startsWith(targetMonthKey) && transaction.categoryId === category.id && transaction.type === 'expense',
+    );
+
+    if (!shouldAutoLog || alreadyExists) return;
+
+    autoLoggedTransactions.push({
       id: generateId(),
       date: targetDate,
       categoryId: category.id,
       description: category.name,
       amount: category.planned,
-      type: 'expense' as const,
-    }));
+      type: 'expense',
+    });
+  });
+
+  return autoLoggedTransactions;
 }
 
 function getArchiveLabel(monthKey: string): string {
