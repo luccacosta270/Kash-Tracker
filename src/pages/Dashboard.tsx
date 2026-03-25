@@ -16,15 +16,10 @@ export default function Dashboard({ data, updateData }: DashboardProps) {
   const totalExpense = monthly.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
   const netBalance = totalIncome - totalExpense;
 
+  // Savings progress is ONLY from transactions in savings-flagged categories
   const savingsFromCategories = useMemo(() => getSavingsContributions(data.transactions, data.categories), [data.transactions, data.categories]);
 
-  const totalSaved = data.savingsGoal.monthlyTarget
-    ? Math.max(savingsFromCategories, Math.max(0, totalIncome - totalExpense))
-    : totalIncome - totalExpense;
-
-  const savingsProgress = data.savingsGoal.monthlyTarget
-    ? Math.max(savingsFromCategories, Math.max(0, totalIncome - totalExpense))
-    : totalSaved;
+  const savingsProgress = savingsFromCategories;
 
   const spending = useMemo(() => getSpendingByCategory(data.transactions, data.categories), [data.transactions, data.categories]);
 
@@ -85,7 +80,7 @@ export default function Dashboard({ data, updateData }: DashboardProps) {
           <div className="flex items-center gap-2">
             <Target className="h-5 w-5 text-savings" />
             <h3 className="font-semibold text-sm text-card-foreground">
-              {data.savingsGoal.monthlyTarget ? 'Savings Goal' : 'Total Saved This Month'}
+              {data.savingsGoal.monthlyTarget ? 'Savings Goal' : 'Savings This Month'}
             </h3>
           </div>
           <button onClick={() => setEditingGoal(!editingGoal)} className="text-xs text-primary font-medium touch-target">
@@ -112,9 +107,9 @@ export default function Dashboard({ data, updateData }: DashboardProps) {
             <p className="text-2xl font-bold text-card-foreground">
               ${savingsProgress.toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </p>
-            {savingsFromCategories > 0 && (
-              <p className="text-xs text-savings mt-1">
-                Includes ${savingsFromCategories.toLocaleString('en-US', { minimumFractionDigits: 2 })} from savings categories
+            {!data.savingsGoal.monthlyTarget && savingsFromCategories === 0 && (
+              <p className="text-xs text-muted-foreground mt-1">
+                Mark categories as "Savings" to track progress here
               </p>
             )}
             {data.savingsGoal.monthlyTarget && (

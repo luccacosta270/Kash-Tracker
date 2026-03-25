@@ -74,13 +74,14 @@ export function generateId() {
 
 export function prefillFixedTransactions(data: AppData): AppData {
   const monthKey = getCurrentMonthKey();
-  const fixed = data.categories.filter(c => c.isFixed && c.planned > 0);
+  // Include both Fixed/Recurring AND Savings categories with planned > 0
+  const autoCategories = data.categories.filter(c => (c.isFixed || c.isSavings) && c.planned > 0);
   const existing = data.transactions.filter(t => t.date.startsWith(monthKey));
 
   let updated = false;
   const newTransactions = [...data.transactions];
 
-  for (const cat of fixed) {
+  for (const cat of autoCategories) {
     const alreadyExists = existing.some(t => t.categoryId === cat.id && t.description.startsWith('[Fixed]'));
     if (!alreadyExists) {
       newTransactions.push({
