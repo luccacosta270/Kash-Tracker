@@ -33,11 +33,44 @@ function shiftMonthKey(monthKey: string, offset: number): string {
 
 function buildAutoLoggedTransactions(
   categories: Category[],
+  sourceTransactions: Transaction[],
   existingTransactions: Transaction[],
   targetMonthKey: string,
 ): Transaction[] {
   const targetDate = `${targetMonthKey}-01`;
   const autoLoggedTransactions: Transaction[] = [];
+  const autoLoggableCategoryIds = new Set(
+    categories
+      .filter(category => (category.isFixed || category.isSavings) && category.planned > 0)
+      .map(category => category.id),
+  );
+
+  const sortedSourceTransactions = [...sourceTransactions].sort((a, b) => a.date.localeCompare(b.date));
+
+  sortedSourceTransactions.forEach(transaction => {
+    if (transaction.type !== 'expense') return;
+    if (!autoLoggableCategoryIds.has(transaction.categoryId)) return;
+
+    const alreadyExists = existingTransactions.some(existingTransaction =>
+      existingTransaction.date.startsWith(targetMonthKey)
+      && existingTransaction.categoryId === transaction.categoryId
+      && existingTransaction.description.trim() === transaction.description.trim()
+      && existingTransaction.type === 'expense',
+    );
+
+    if (alreadyExists) return;
+
+    autoLoggedTransactions.push({
+      id: generateId(),
+      date: targetDate,
+      categoryId: transaction.categoryId,
+      description: transaction.description.trim() || categories.find(category => category.id === transaction.categoryId)?.name || 'Recurring transaction',
+      amount: transaction.amount,
+      type: 'expense',
+    });
+  });
+
+  if (autoLoggedTransactions.length > 0) return autoLoggedTransactions;
 
   categories.forEach(category => {
     const shouldAutoLog = (category.isFixed || category.isSavings) && category.planned > 0;
@@ -133,7 +166,11 @@ export function generateId() {
 
 export function prefillFixedTransactions(data: AppData): AppData {
   const monthKey = getLiveMonthKey(data.transactions);
-  const autoLoggedTransactions = buildAutoLoggedTransactions(data.categories, data.transactions, monthKey);
+  const previousMonthKey = shiftMonthKey(monthKey, -1);
+  const previousMonthTransactions = data.transactions.filter(transaction => transaction.date.startsWith(previousMonthKey));
+  const archivedPreviousMonthTransactions = data.archives.find(archive => archive.monthKey === previousMonthKey)?.transactions || [];
+  const sourceTransactions = previousMonthTransactions.length > 0 ? previousMonthTransactions : archivedPreviousMonthTransactions;
+  const autoLoggedTransactions = buildAutoLoggedTransactions(data.categories, sourceTransactions, data.transactions, monthKey);
 
   if (autoLoggedTransactions.length > 0) {
     return {
@@ -172,7 +209,7 @@ export function archiveMonth(data: AppData): { archived: AppData; monthLabel: st
 
   // Remove current month transactions, keep others
   const remainingTransactions = data.transactions.filter(t => !t.date.startsWith(monthKey));
-  const autoLoggedTransactions = buildAutoLoggedTransactions(data.categories, remainingTransactions, nextMonthKey);
+  const autoLoggedTransactions = buildAutoLoggedTransactions(data.categories, monthTransactions, remainingTransactions, nextMonthKey);
 
   return {
     archived: {
