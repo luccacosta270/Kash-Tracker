@@ -1,9 +1,43 @@
-import logo from '@/assets/logo.png';
+import { Moon, Sun, Cloud } from 'lucide-react';
+import kashCool from '@/assets/kash-cool.png';
 
-export default function Header() {
+interface HeaderProps {
+  userName?: string;
+  isDark: boolean;
+  onToggleTheme: () => void;
+}
+
+function getGreeting(): string {
+  const hour = new Date().getHours();
+  if (hour < 12) return 'Good morning';
+  if (hour < 17) return 'Good afternoon';
+  return 'Good evening';
+}
+
+export default function Header({ userName, isDark, onToggleTheme }: HeaderProps) {
   return (
-    <header className="sticky top-0 z-40 bg-background/90 backdrop-blur-md border-b border-border px-4 pt-5 pb-3 flex justify-center">
-      <img src={logo} alt="MyTracker" className="h-[120px] w-[300px] object-contain" />
+    <header className="sticky top-0 z-40 bg-background/90 backdrop-blur-md border-b border-border px-4 pt-5 pb-3">
+      <div className="flex items-center justify-between max-w-lg mx-auto">
+        <div className="flex items-center gap-3">
+          <img src={kashCool} alt="Kash" className="h-10 w-10 rounded-full object-cover" />
+          <div>
+            <p className="text-sm font-bold text-foreground leading-tight">
+              {getGreeting()}{userName ? `, ${userName}` : ''}
+            </p>
+            <p className="text-xs text-muted-foreground">Let's check the stats 📊</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <Cloud className="h-4 w-4 text-muted-foreground opacity-50" />
+          <button
+            onClick={onToggleTheme}
+            className="rounded-full p-2 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors touch-target"
+            aria-label="Toggle theme"
+          >
+            {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+          </button>
+        </div>
+      </div>
     </header>
   );
 }

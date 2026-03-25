@@ -15,7 +15,7 @@ const defaultData: AppData = {
   transactions: [],
   savingsGoal: { monthlyTarget: null },
   hasSeenWelcome: false,
-  profile: { name: '', avatarUrl: null },
+  profile: { name: '' },
   archives: [],
   viewingMonth: null,
   lastAutoLogged: null,
@@ -105,9 +105,7 @@ function getLatestActiveMonthKey(transactions: Transaction[]): string | null {
 export function getLiveMonthKey(transactions: Transaction[]): string {
   const currentMonthKey = getCurrentMonthKey();
   const latestActiveMonthKey = getLatestActiveMonthKey(transactions);
-
   if (!latestActiveMonthKey) return currentMonthKey;
-
   return latestActiveMonthKey > currentMonthKey ? latestActiveMonthKey : currentMonthKey;
 }
 
@@ -116,12 +114,14 @@ export function loadData(): AppData {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...defaultData };
     const parsed = JSON.parse(raw) as Partial<AppData>;
+    // Strip avatarUrl from old profile data
+    const profile = { name: parsed.profile?.name || '' };
     return {
       ...defaultData,
       ...parsed,
-      profile: { ...defaultData.profile, ...(parsed.profile || {}) },
+      profile,
       archives: parsed.archives || [],
-      viewingMonth: null, // always start on current month
+      viewingMonth: null,
       lastAutoLogged: parsed.lastAutoLogged || null,
     };
   } catch {
@@ -207,7 +207,6 @@ export function archiveMonth(data: AppData): { archived: AppData; monthLabel: st
     totalSaved: Math.max(0, totalIncome - totalExpense),
   };
 
-  // Remove current month transactions, keep others
   const remainingTransactions = data.transactions.filter(t => !t.date.startsWith(monthKey));
   const autoLoggedTransactions = buildAutoLoggedTransactions(data.categories, monthTransactions, remainingTransactions, nextMonthKey);
 
@@ -228,7 +227,6 @@ export function archiveMonth(data: AppData): { archived: AppData; monthLabel: st
   };
 }
 
-/** Get savings from categories marked as isSavings for a given month */
 export function getSavingsContributions(transactions: Transaction[], categories: Category[], monthKey?: string): number {
   const key = monthKey || getLiveMonthKey(transactions);
   const monthly = transactions.filter(t => t.date.startsWith(key));

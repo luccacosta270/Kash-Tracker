@@ -1,7 +1,7 @@
 import { useMemo, useState } from 'react';
-import { AppData, PennyState } from '@/lib/types';
+import { AppData, KashState } from '@/lib/types';
 import { getLiveMonthKey, getCurrentMonthTransactions, getSpendingByCategory } from '@/lib/store';
-import PennyMascot from '@/components/PennyMascot';
+import KashMascot from '@/components/KashMascot';
 import { TrendingUp, TrendingDown, Wallet, Target } from 'lucide-react';
 
 interface DashboardProps {
@@ -19,7 +19,6 @@ export default function Dashboard({ data, updateData }: DashboardProps) {
 
   const savingsProgress = useMemo(() => {
     const savingsCategoryIds = new Set(data.categories.filter(category => category.isSavings).map(category => category.id));
-
     return monthly.reduce((sum, transaction) => {
       if (transaction.type !== 'expense' || !savingsCategoryIds.has(transaction.categoryId)) return sum;
       return sum + transaction.amount;
@@ -29,20 +28,26 @@ export default function Dashboard({ data, updateData }: DashboardProps) {
   const spending = useMemo(() => getSpendingByCategory(data.transactions, data.categories), [data.transactions, data.categories]);
   const autoLoggedThisMonth = data.lastAutoLogged?.monthKey === liveMonthKey ? data.lastAutoLogged : null;
 
-  const { pennyState, overCat } = useMemo(() => {
-    if (autoLoggedThisMonth?.count) return { pennyState: 'newmonth' as PennyState, overCat: undefined };
-    if (!data.hasSeenWelcome) return { pennyState: 'welcome' as PennyState, overCat: undefined };
+  // SMART EMOTION: Only alert on GENERAL categories (not Fixed/Savings)
+  const { kashState, overCat } = useMemo(() => {
+    if (autoLoggedThisMonth?.count) return { kashState: 'newmonth' as KashState, overCat: undefined };
+    if (!data.hasSeenWelcome) return { kashState: 'welcome' as KashState, overCat: undefined };
 
-    const worst = spending.reduce<{ pct: number; name: string }>((w, s) => {
+    // Only check general (non-fixed, non-savings) categories for alert state
+    const generalSpending = spending.filter(s => !s.category.isFixed && !s.category.isSavings);
+    const worst = generalSpending.reduce<{ pct: number; name: string }>((w, s) => {
       if (s.category.planned > 0 && s.percentage > w.pct) return { pct: s.percentage, name: s.category.name };
       return w;
     }, { pct: 0, name: '' });
 
-    if (worst.pct > 100) return { pennyState: 'rescue' as PennyState, overCat: worst.name };
-    if (worst.pct > 95) return { pennyState: 'sweat' as PennyState, overCat: worst.name };
-    if (worst.pct > 70) return { pennyState: 'steady' as PennyState, overCat: undefined };
-    return { pennyState: 'highfive' as PennyState, overCat: undefined };
-  }, [autoLoggedThisMonth, data.hasSeenWelcome, spending]);
+    // Also check if total remaining is negative
+    const totalRemaining = netBalance;
+
+    if (worst.pct > 100 || totalRemaining < 0) return { kashState: 'alert' as KashState, overCat: worst.name || 'General spending' };
+    if (worst.pct > 95) return { kashState: 'alert' as KashState, overCat: worst.name };
+    if (worst.pct > 70) return { kashState: 'cool' as KashState, overCat: undefined };
+    return { kashState: 'happy' as KashState, overCat: undefined };
+  }, [autoLoggedThisMonth, data.hasSeenWelcome, spending, netBalance]);
 
   const dismissWelcome = () => {
     updateData(d => ({ ...d, hasSeenWelcome: true }));
@@ -62,11 +67,24 @@ export default function Dashboard({ data, updateData }: DashboardProps) {
 
   const userName = data.profile.name || undefined;
 
+  // Group transactions into 3 sections
+  const savingsCatIds = new Set(data.categories.filter(c => c.isSavings).map(c => c.id));
+  const fixedCatIds = new Set(data.categories.filter(c => c.isFixed && !c.isSavings).map(c => c.id));
+
+  const savingsTransactions = monthly.filter(t => t.type === 'expense' && savingsCatIds.has(t.categoryId));
+  const fixedTransactions = monthly.filter(t => t.type === 'expense' && fixedCatIds.has(t.categoryId));
+  const generalTransactions = monthly.filter(t => t.type === 'expense' && !savingsCatIds.has(t.categoryId) && !fixedCatIds.has(t.categoryId));
+  const incomeTransactions = monthly.filter(t => t.type === 'income');
+
+  const getCatName = (id: string) => data.categories.find(c => c.id === id)?.name || 'Unknown';
+
+  const subTotal = (txns: typeof monthly) => txns.reduce((s, t) => s + t.amount, 0);
+
   return (
     <div className="space-y-4 px-4 pt-4 pb-24">
       <div onClick={!data.hasSeenWelcome ? dismissWelcome : undefined} className={!data.hasSeenWelcome ? 'cursor-pointer' : ''}>
-        <PennyMascot
-          state={pennyState}
+        <KashMascot
+          state={kashState}
           overBudgetCategory={overCat}
           userName={userName}
           autoLoggedCount={autoLoggedThisMonth?.count}
@@ -135,6 +153,83 @@ export default function Dashboard({ data, updateData }: DashboardProps) {
           </>
         )}
       </div>
+
+      {/* 3-Section Transaction Groups */}
+      {incomeTransactions.length > 0 && (
+        <TransactionGroup
+          title="💰 Income"
+          transactions={incomeTransactions}
+          getCatName={getCatName}
+          total={subTotal(incomeTransactions)}
+          totalLabel="Total Income"
+          colorClass="text-income"
+        />
+      )}
+
+      <TransactionGroup
+        title="🏦 Savings"
+        transactions={savingsTransactions}
+        getCatName={getCatName}
+        total={subTotal(savingsTransactions)}
+        totalLabel="Total Savings"
+        colorClass="text-savings"
+      />
+
+      <TransactionGroup
+        title="📌 Fixed Bills"
+        transactions={fixedTransactions}
+        getCatName={getCatName}
+        total={subTotal(fixedTransactions)}
+        totalLabel="Total Fixed"
+        colorClass="text-muted-foreground"
+      />
+
+      <TransactionGroup
+        title="🛒 General Spending"
+        transactions={generalTransactions}
+        getCatName={getCatName}
+        total={subTotal(generalTransactions)}
+        totalLabel="Total General"
+        colorClass="text-alert"
+      />
+    </div>
+  );
+}
+
+function TransactionGroup({
+  title, transactions, getCatName, total, totalLabel, colorClass,
+}: {
+  title: string;
+  transactions: { id: string; description: string; amount: number; type: string; categoryId: string }[];
+  getCatName: (id: string) => string;
+  total: number;
+  totalLabel: string;
+  colorClass: string;
+}) {
+  return (
+    <div className="rounded-3xl bg-card p-4 shadow-card space-y-2">
+      <h3 className="text-xs font-bold text-muted-foreground uppercase tracking-wider">{title}</h3>
+      {transactions.length === 0 ? (
+        <p className="text-xs text-muted-foreground italic py-2">No transactions logged yet.</p>
+      ) : (
+        <>
+          {transactions.map(t => (
+            <div key={t.id} className="flex items-center justify-between py-1.5">
+              <div>
+                <p className="text-sm font-medium text-card-foreground">{t.description}</p>
+                <p className="text-xs text-muted-foreground">{getCatName(t.categoryId)}</p>
+              </div>
+              <span className={`text-sm font-bold ${t.type === 'income' ? 'text-income' : colorClass}`}>
+                {t.type === 'income' ? '+' : '-'}${t.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              </span>
+            </div>
+          ))}
+          <div className="border-t border-border pt-2 flex justify-between">
+            <span className="text-xs font-semibold text-muted-foreground">{totalLabel}</span>
+            <span className={`text-xs font-bold ${colorClass}`}>${total.toLocaleString('en-US', { minimumFractionDigits: 2 })}</span>
+          </div>
+        </>
+      )}
     </div>
   );
 }

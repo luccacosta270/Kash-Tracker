@@ -21,7 +21,6 @@ export interface SavingsGoal {
 
 export interface UserProfile {
   name: string;
-  avatarUrl: string | null;
 }
 
 export interface MonthArchive {
@@ -53,4 +52,4 @@ export interface AppData {
   lastAutoLogged: AutoLoggedSummary | null;
 }
 
-export type PennyState = 'welcome' | 'highfive' | 'steady' | 'sweat' | 'rescue' | 'newmonth';
+export type KashState = 'welcome' | 'happy' | 'cool' | 'alert' | 'newmonth' | 'darkmode';
