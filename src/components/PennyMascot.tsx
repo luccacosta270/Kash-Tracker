@@ -28,7 +28,7 @@ const messages: Record<PennyState, (name?: string, cat?: string, count?: number,
   steady: (name) => `Right on target${greet(name)}. Everything is flowing exactly as planned. Keep it up!`,
   sweat: (name, cat) => `Oof${greet(name)}, we're cutting it close! Just a heads up—we've hit the limit for ${cat || 'a category'}.`,
   rescue: (name, cat) => `Change of plans${greet(name)}! We've gone over in ${cat || 'a category'}. Let's see where we can trim back to save the month.`,
-  newmonth: (name, _cat, count, names) => `Oink! I've automatically logged your ${count || 0} recurring transaction${count === 1 ? '' : 's'} for you${greet(name)}. Your ${formatAutoLoggedNames(names)} ${count === 1 ? 'is' : 'are'} already accounted for!`,
+  newmonth: (name, _cat, count, names) => `Oink! I've copied your ${count || 0} recurring item${count === 1 ? '' : 's'} as individual transactions for you${greet(name)}. No combining allowed! Your ${formatAutoLoggedNames(names)} ${count === 1 ? 'is' : 'are'} already accounted for!`,
 };
 
 const images: Record<PennyState, string> = {
