@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Header from '@/components/Header';
 import BottomNav from '@/components/BottomNav';
 import Dashboard from '@/pages/Dashboard';
@@ -13,10 +13,23 @@ const Index = () => {
   const [page, setPage] = useState('home');
   const { data, updateData } = useAppData();
 
+  // Dark mode
+  const [isDark, setIsDark] = useState(() => {
+    return localStorage.getItem('kash-theme') === 'dark';
+  });
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+    localStorage.setItem('kash-theme', isDark ? 'dark' : 'light');
+  }, [isDark]);
+
   const isViewingArchive = data.viewingMonth !== null && data.viewingMonth !== undefined;
 
   const handleNavigate = (p: string) => {
-    // If navigating away from history context, clear it
     if (p === 'profile' && isViewingArchive) {
       updateData(d => ({ ...d, viewingMonth: null }));
     }
@@ -25,7 +38,7 @@ const Index = () => {
 
   return (
     <div className="min-h-screen bg-background max-w-lg mx-auto">
-      <Header />
+      <Header userName={data.profile.name || undefined} isDark={isDark} onToggleTheme={() => setIsDark(!isDark)} />
       <div className="transition-opacity duration-200">
         {isViewingArchive && page !== 'profile' && page !== 'settings' ? (
           <HistoryPage data={data} updateData={updateData} page={page} />
