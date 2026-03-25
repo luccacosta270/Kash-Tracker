@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { AppData, Transaction } from '@/lib/types';
 import { generateId } from '@/lib/store';
-import { Plus, X } from 'lucide-react';
+import { Plus } from 'lucide-react';
+import SwipeableTransaction from '@/components/SwipeableTransaction';
+import { ScrollArea } from '@/components/ui/scroll-area';
 
 interface TransactionsProps {
   data: AppData;
@@ -15,6 +17,7 @@ export default function Transactions({ data, updateData }: TransactionsProps) {
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const sorted = [...data.transactions].sort((a, b) => b.date.localeCompare(a.date));
 
@@ -23,23 +26,50 @@ export default function Transactions({ data, updateData }: TransactionsProps) {
     return acc;
   }, {});
 
+  const resetForm = () => {
+    setShowForm(false);
+    setEditingId(null);
+    setDescription('');
+    setAmount('');
+    setType('expense');
+    setDate(new Date().toISOString().split('T')[0]);
+  };
+
   const addTransaction = () => {
     const val = parseFloat(amount);
     if (isNaN(val) || val <= 0 || !description.trim()) return;
-    updateData(d => ({
-      ...d,
-      hasSeenWelcome: true,
-      transactions: [...d.transactions, {
-        id: generateId(), date, categoryId, description: description.trim(), amount: val, type,
-      }],
-    }));
-    setShowForm(false);
-    setDescription('');
-    setAmount('');
+
+    if (editingId) {
+      updateData(d => ({
+        ...d,
+        transactions: d.transactions.map(t =>
+          t.id === editingId ? { ...t, date, categoryId, description: description.trim(), amount: val, type } : t
+        ),
+      }));
+    } else {
+      updateData(d => ({
+        ...d,
+        hasSeenWelcome: true,
+        transactions: [...d.transactions, {
+          id: generateId(), date, categoryId, description: description.trim(), amount: val, type,
+        }],
+      }));
+    }
+    resetForm();
   };
 
   const deleteTransaction = (id: string) => {
     updateData(d => ({ ...d, transactions: d.transactions.filter(t => t.id !== id) }));
+  };
+
+  const startEdit = (t: Transaction) => {
+    setEditingId(t.id);
+    setType(t.type);
+    setCategoryId(t.categoryId);
+    setDescription(t.description);
+    setAmount(t.amount.toString());
+    setDate(t.date);
+    setShowForm(true);
   };
 
   const getCatName = (id: string) => data.categories.find(c => c.id === id)?.name || 'Unknown';
@@ -55,20 +85,13 @@ export default function Transactions({ data, updateData }: TransactionsProps) {
           </p>
           <div className="space-y-2">
             {txns.map(t => (
-              <div key={t.id} className="flex items-center justify-between rounded-3xl bg-card p-4 shadow-card">
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium text-card-foreground truncate">{t.description}</p>
-                  <p className="text-xs text-muted-foreground">{getCatName(t.categoryId)}</p>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className={`text-sm font-bold ${t.type === 'income' ? 'text-income' : 'text-alert'}`}>
-                    {t.type === 'income' ? '+' : '-'}${t.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                  </span>
-                  <button onClick={() => deleteTransaction(t.id)} className="touch-target p-1 text-muted-foreground hover:text-alert">
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
+              <SwipeableTransaction
+                key={t.id}
+                transaction={t}
+                categoryName={getCatName(t.categoryId)}
+                onDelete={deleteTransaction}
+                onEdit={startEdit}
+              />
             ))}
           </div>
         </div>
@@ -80,17 +103,17 @@ export default function Transactions({ data, updateData }: TransactionsProps) {
 
       {/* FAB */}
       <button
-        onClick={() => setShowForm(true)}
+        onClick={() => { resetForm(); setShowForm(true); }}
         className="fixed bottom-20 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary shadow-lg text-primary-foreground touch-target"
       >
         <Plus className="h-6 w-6" />
       </button>
 
-      {/* Add Transaction Modal */}
+      {/* Add/Edit Transaction Modal */}
       {showForm && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/30 backdrop-blur-sm" onClick={() => setShowForm(false)}>
-          <div className="w-full max-w-lg rounded-t-3xl bg-card p-6 space-y-4" onClick={e => e.stopPropagation()}>
-            <h3 className="text-lg font-bold text-card-foreground">Add Transaction</h3>
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/30 backdrop-blur-sm" onClick={resetForm}>
+          <div className="w-full max-w-lg rounded-t-3xl bg-card p-6 pb-[100px] space-y-4 max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-card-foreground">{editingId ? 'Edit Transaction' : 'Add Transaction'}</h3>
 
             <div className="flex gap-2">
               {(['expense', 'income'] as const).map(t => (
@@ -133,7 +156,7 @@ export default function Transactions({ data, updateData }: TransactionsProps) {
             />
 
             <button onClick={addTransaction} className="w-full rounded-xl bg-primary py-3 text-sm font-semibold text-primary-foreground touch-target">
-              Add Transaction
+              {editingId ? 'Save Changes' : 'Add Transaction'}
             </button>
           </div>
         </div>

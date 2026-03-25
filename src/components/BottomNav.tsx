@@ -1,4 +1,4 @@
-import { Home, ArrowLeftRight, PieChart, Settings } from 'lucide-react';
+import { Home, ArrowLeftRight, PieChart, Settings, User } from 'lucide-react';
 
 interface BottomNavProps {
   active: string;
@@ -10,6 +10,7 @@ const tabs = [
   { id: 'transactions', label: 'Transactions', icon: ArrowLeftRight },
   { id: 'budget', label: 'Budget', icon: PieChart },
   { id: 'settings', label: 'Settings', icon: Settings },
+  { id: 'profile', label: 'Profile', icon: User },
 ];
 
 export default function BottomNav({ active, onNavigate }: BottomNavProps) {
@@ -23,7 +24,7 @@ export default function BottomNav({ active, onNavigate }: BottomNavProps) {
             <button
               key={tab.id}
               onClick={() => onNavigate(tab.id)}
-              className={`touch-target flex flex-col items-center gap-0.5 rounded-2xl px-4 py-1.5 transition-colors ${
+              className={`touch-target flex flex-col items-center gap-0.5 rounded-2xl px-3 py-1.5 transition-colors ${
                 isActive
                   ? 'text-primary'
                   : 'text-muted-foreground hover:text-foreground'
