@@ -1,8 +1,10 @@
-import { Home, ArrowLeftRight, PieChart, Settings, User } from 'lucide-react';
+import { Home, ArrowLeftRight, PieChart, Settings, User, ArrowLeft } from 'lucide-react';
 
 interface BottomNavProps {
   active: string;
   onNavigate: (page: string) => void;
+  isViewingArchive?: boolean;
+  onExitArchive?: () => void;
 }
 
 const tabs = [
@@ -13,9 +15,17 @@ const tabs = [
   { id: 'profile', label: 'Profile', icon: User },
 ];
 
-export default function BottomNav({ active, onNavigate }: BottomNavProps) {
+export default function BottomNav({ active, onNavigate, isViewingArchive, onExitArchive }: BottomNavProps) {
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-border bg-card/95 backdrop-blur-md">
+      {isViewingArchive && (
+        <div className="bg-income/10 px-4 py-1.5 flex items-center justify-between">
+          <span className="text-xs font-medium text-income">Viewing archived month</span>
+          <button onClick={onExitArchive} className="text-xs font-semibold text-income flex items-center gap-1">
+            <ArrowLeft className="h-3 w-3" /> Back to current
+          </button>
+        </div>
+      )}
       <div className="mx-auto flex max-w-lg items-center justify-around py-2">
         {tabs.map(tab => {
           const Icon = tab.icon;

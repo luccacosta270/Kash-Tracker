@@ -3,6 +3,7 @@ export interface Category {
   name: string;
   planned: number;
   isFixed: boolean;
+  isSavings?: boolean;
 }
 
 export interface Transaction {
@@ -41,6 +42,8 @@ export interface AppData {
   hasSeenWelcome: boolean;
   profile: UserProfile;
   archives: MonthArchive[];
+  /** The month currently being viewed, null = current live month */
+  viewingMonth: string | null;
 }
 
-export type PennyState = 'welcome' | 'highfive' | 'steady' | 'sweat' | 'rescue';
+export type PennyState = 'welcome' | 'highfive' | 'steady' | 'sweat' | 'rescue' | 'newmonth';

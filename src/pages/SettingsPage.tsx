@@ -12,10 +12,12 @@ export default function SettingsPage({ data, updateData }: SettingsProps) {
   const [newName, setNewName] = useState('');
   const [newPlanned, setNewPlanned] = useState('');
   const [newFixed, setNewFixed] = useState(false);
+  const [newSavings, setNewSavings] = useState(false);
   const [editId, setEditId] = useState<string | null>(null);
   const [editName, setEditName] = useState('');
   const [editPlanned, setEditPlanned] = useState('');
   const [editFixed, setEditFixed] = useState(false);
+  const [editSavings, setEditSavings] = useState(false);
 
   const addCategory = () => {
     if (!newName.trim()) return;
@@ -27,11 +29,13 @@ export default function SettingsPage({ data, updateData }: SettingsProps) {
         name: newName.trim(),
         planned: isNaN(planned) ? 0 : planned,
         isFixed: newFixed,
+        isSavings: newSavings,
       }],
     }));
     setNewName('');
     setNewPlanned('');
     setNewFixed(false);
+    setNewSavings(false);
   };
 
   const deleteCategory = (id: string) => {
@@ -49,6 +53,7 @@ export default function SettingsPage({ data, updateData }: SettingsProps) {
     setEditName(cat.name);
     setEditPlanned(cat.planned.toString());
     setEditFixed(cat.isFixed);
+    setEditSavings(!!cat.isSavings);
   };
 
   const saveEdit = () => {
@@ -57,7 +62,7 @@ export default function SettingsPage({ data, updateData }: SettingsProps) {
     updateData(d => ({
       ...d,
       categories: d.categories.map(c =>
-        c.id === editId ? { ...c, name: editName.trim(), planned: isNaN(planned) ? 0 : planned, isFixed: editFixed } : c
+        c.id === editId ? { ...c, name: editName.trim(), planned: isNaN(planned) ? 0 : planned, isFixed: editFixed, isSavings: editSavings } : c
       ),
     }));
     setEditId(null);
@@ -85,6 +90,10 @@ export default function SettingsPage({ data, updateData }: SettingsProps) {
           <input type="checkbox" checked={newFixed} onChange={e => setNewFixed(e.target.checked)} className="rounded" />
           Fixed/Recurring
         </label>
+        <label className="flex items-center gap-2 text-sm text-savings">
+          <input type="checkbox" checked={newSavings} onChange={e => setNewSavings(e.target.checked)} className="rounded" />
+          Savings Category
+        </label>
         <button onClick={addCategory} className="flex items-center gap-1 rounded-xl bg-primary px-4 py-2.5 text-sm font-medium text-primary-foreground touch-target">
           <Plus className="h-4 w-4" /> Add
         </button>
@@ -104,6 +113,10 @@ export default function SettingsPage({ data, updateData }: SettingsProps) {
                   <input type="checkbox" checked={editFixed} onChange={e => setEditFixed(e.target.checked)} className="rounded" />
                   Fixed
                 </label>
+                <label className="flex items-center gap-2 text-sm text-savings">
+                  <input type="checkbox" checked={editSavings} onChange={e => setEditSavings(e.target.checked)} className="rounded" />
+                  Savings
+                </label>
                 <div className="flex gap-2">
                   <button onClick={saveEdit} className="rounded-xl bg-savings px-3 py-2 text-sm text-savings-foreground touch-target"><Check className="h-4 w-4" /></button>
                   <button onClick={() => setEditId(null)} className="rounded-xl bg-muted px-3 py-2 text-sm text-muted-foreground touch-target"><X className="h-4 w-4" /></button>
@@ -112,7 +125,11 @@ export default function SettingsPage({ data, updateData }: SettingsProps) {
             ) : (
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-card-foreground">{cat.name} {cat.isFixed && <span className="text-xs text-muted-foreground">(Fixed)</span>}</p>
+                  <p className="text-sm font-medium text-card-foreground">
+                    {cat.name}
+                    {cat.isFixed && <span className="text-xs text-muted-foreground ml-1">(Fixed)</span>}
+                    {cat.isSavings && <span className="text-xs text-savings ml-1">(Savings)</span>}
+                  </p>
                   <p className="text-xs text-muted-foreground">Planned: ${cat.planned.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
                 </div>
                 <div className="flex gap-1">

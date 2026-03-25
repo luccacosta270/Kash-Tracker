@@ -17,6 +17,7 @@ const defaultData: AppData = {
   hasSeenWelcome: false,
   profile: { name: '', avatarUrl: null },
   archives: [],
+  viewingMonth: null,
 };
 
 export function loadData(): AppData {
@@ -29,6 +30,7 @@ export function loadData(): AppData {
       ...parsed,
       profile: { ...defaultData.profile, ...(parsed.profile || {}) },
       archives: parsed.archives || [],
+      viewingMonth: null, // always start on current month
     };
   } catch {
     return { ...defaultData };
@@ -53,8 +55,9 @@ export function getTransactionsForMonth(transactions: Transaction[], monthKey: s
   return transactions.filter(t => t.date.startsWith(monthKey));
 }
 
-export function getSpendingByCategory(transactions: Transaction[], categories: Category[]) {
-  const monthly = getCurrentMonthTransactions(transactions);
+export function getSpendingByCategory(transactions: Transaction[], categories: Category[], monthKey?: string) {
+  const key = monthKey || getCurrentMonthKey();
+  const monthly = transactions.filter(t => t.date.startsWith(key));
   return categories.map(cat => {
     const actual = monthly
       .filter(t => t.categoryId === cat.id && t.type === 'expense')
@@ -127,4 +130,16 @@ export function archiveMonth(data: AppData): { archived: AppData; monthLabel: st
     },
     monthLabel: label,
   };
+}
+
+/** Get savings from categories marked as isSavings for a given month */
+export function getSavingsContributions(transactions: Transaction[], categories: Category[], monthKey?: string): number {
+  const key = monthKey || getCurrentMonthKey();
+  const monthly = transactions.filter(t => t.date.startsWith(key));
+  const savingsCats = categories.filter(c => c.isSavings);
+  return savingsCats.reduce((sum, cat) => {
+    return sum + monthly
+      .filter(t => t.categoryId === cat.id && t.type === 'expense')
+      .reduce((s, t) => s + t.amount, 0);
+  }, 0);
 }
