@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { AppData, PennyState } from '@/lib/types';
 import { getCurrentMonthTransactions, getSpendingByCategory } from '@/lib/store';
 import PennyMascot from '@/components/PennyMascot';
@@ -127,4 +127,4 @@ function StatCard({ icon, label, value, colorClass }: { icon: React.ReactNode; l
   );
 }
 
-import { useState } from 'react';
+
