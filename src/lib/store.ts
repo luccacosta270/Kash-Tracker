@@ -1,4 +1,4 @@
-import { AppData, Category, Transaction } from './types';
+import { AppData, Category, Transaction, MonthArchive } from './types';
 
 const STORAGE_KEY = 'mytracker-data';
 
@@ -15,13 +15,21 @@ const defaultData: AppData = {
   transactions: [],
   savingsGoal: { monthlyTarget: null },
   hasSeenWelcome: false,
+  profile: { name: '', avatarUrl: null },
+  archives: [],
 };
 
 export function loadData(): AppData {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return { ...defaultData };
-    return JSON.parse(raw) as AppData;
+    const parsed = JSON.parse(raw) as Partial<AppData>;
+    return {
+      ...defaultData,
+      ...parsed,
+      profile: { ...defaultData.profile, ...(parsed.profile || {}) },
+      archives: parsed.archives || [],
+    };
   } catch {
     return { ...defaultData };
   }
@@ -31,14 +39,18 @@ export function saveData(data: AppData) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
 }
 
-export function getCurrentMonthTransactions(transactions: Transaction[]): Transaction[] {
+export function getCurrentMonthKey(): string {
   const now = new Date();
-  const month = now.getMonth();
-  const year = now.getFullYear();
-  return transactions.filter(t => {
-    const d = new Date(t.date);
-    return d.getMonth() === month && d.getFullYear() === year;
-  });
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+}
+
+export function getCurrentMonthTransactions(transactions: Transaction[]): Transaction[] {
+  const monthKey = getCurrentMonthKey();
+  return transactions.filter(t => t.date.startsWith(monthKey));
+}
+
+export function getTransactionsForMonth(transactions: Transaction[], monthKey: string): Transaction[] {
+  return transactions.filter(t => t.date.startsWith(monthKey));
 }
 
 export function getSpendingByCategory(transactions: Transaction[], categories: Category[]) {
@@ -58,8 +70,7 @@ export function generateId() {
 }
 
 export function prefillFixedTransactions(data: AppData): AppData {
-  const now = new Date();
-  const monthKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  const monthKey = getCurrentMonthKey();
   const fixed = data.categories.filter(c => c.isFixed && c.planned > 0);
   const existing = data.transactions.filter(t => t.date.startsWith(monthKey));
 
@@ -83,4 +94,37 @@ export function prefillFixedTransactions(data: AppData): AppData {
 
   if (updated) return { ...data, transactions: newTransactions };
   return data;
+}
+
+export function archiveMonth(data: AppData): { archived: AppData; monthLabel: string } {
+  const monthKey = getCurrentMonthKey();
+  const monthTransactions = getCurrentMonthTransactions(data.transactions);
+  const totalIncome = monthTransactions.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const totalExpense = monthTransactions.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+
+  const now = new Date();
+  const label = now.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+
+  const archive: MonthArchive = {
+    monthKey,
+    label,
+    categories: [...data.categories],
+    transactions: monthTransactions,
+    savingsGoal: { ...data.savingsGoal },
+    totalIncome,
+    totalExpense,
+    totalSaved: Math.max(0, totalIncome - totalExpense),
+  };
+
+  // Remove current month transactions, keep others
+  const remainingTransactions = data.transactions.filter(t => !t.date.startsWith(monthKey));
+
+  return {
+    archived: {
+      ...data,
+      transactions: remainingTransactions,
+      archives: [...data.archives.filter(a => a.monthKey !== monthKey), archive],
+    },
+    monthLabel: label,
+  };
 }
