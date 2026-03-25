@@ -1,17 +1,17 @@
 import { useState, useRef } from 'react';
 import { AppData } from '@/lib/types';
-import { archiveMonth, getCurrentMonthKey } from '@/lib/store';
-import { User, Camera, Archive, ChevronRight, X } from 'lucide-react';
+import { archiveMonth } from '@/lib/store';
+import { User, Camera, Archive, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface ProfileProps {
   data: AppData;
   updateData: (updater: (prev: AppData) => AppData) => void;
+  onViewMonth: (monthKey: string) => void;
 }
 
-export default function ProfilePage({ data, updateData }: ProfileProps) {
+export default function ProfilePage({ data, updateData, onViewMonth }: ProfileProps) {
   const [nameInput, setNameInput] = useState(data.profile.name);
-  const [showArchive, setShowArchive] = useState<string | null>(null);
   const fileRef = useRef<HTMLInputElement>(null);
 
   const saveName = () => {
@@ -38,8 +38,6 @@ export default function ProfilePage({ data, updateData }: ProfileProps) {
     });
     toast.success('Month archived! Spending reset.');
   };
-
-  const selectedArchive = data.archives.find(a => a.monthKey === showArchive);
 
   return (
     <div className="px-4 pt-4 pb-24 space-y-4">
@@ -98,61 +96,13 @@ export default function ProfilePage({ data, updateData }: ProfileProps) {
             {[...data.archives].reverse().map(a => (
               <button
                 key={a.monthKey}
-                onClick={() => setShowArchive(a.monthKey)}
+                onClick={() => onViewMonth(a.monthKey)}
                 className="flex w-full items-center justify-between rounded-xl bg-muted px-4 py-3 text-sm text-card-foreground touch-target"
               >
                 <span>{a.label}</span>
                 <ChevronRight className="h-4 w-4 text-muted-foreground" />
               </button>
             ))}
-          </div>
-        </div>
-      )}
-
-      {/* Archive Detail Modal */}
-      {selectedArchive && (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-foreground/30 backdrop-blur-sm" onClick={() => setShowArchive(null)}>
-          <div className="w-full max-w-lg max-h-[80vh] rounded-t-3xl bg-card p-6 space-y-4 overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-bold text-card-foreground">{selectedArchive.label}</h3>
-              <button onClick={() => setShowArchive(null)} className="touch-target p-2 text-muted-foreground">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2">
-              <div className="rounded-xl bg-muted p-3 text-center">
-                <p className="text-xs text-muted-foreground">Income</p>
-                <p className="text-sm font-bold text-income">${selectedArchive.totalIncome.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
-              </div>
-              <div className="rounded-xl bg-muted p-3 text-center">
-                <p className="text-xs text-muted-foreground">Spent</p>
-                <p className="text-sm font-bold text-alert">${selectedArchive.totalExpense.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
-              </div>
-              <div className="rounded-xl bg-muted p-3 text-center">
-                <p className="text-xs text-muted-foreground">Saved</p>
-                <p className="text-sm font-bold text-savings">${selectedArchive.totalSaved.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
-              </div>
-            </div>
-
-            <h4 className="text-sm font-semibold text-card-foreground">Transactions</h4>
-            <div className="space-y-2">
-              {selectedArchive.transactions.length === 0 && <p className="text-xs text-muted-foreground">No transactions.</p>}
-              {selectedArchive.transactions.map(t => {
-                const catName = selectedArchive.categories.find(c => c.id === t.categoryId)?.name || 'Unknown';
-                return (
-                  <div key={t.id} className="flex items-center justify-between rounded-xl bg-muted/50 p-3">
-                    <div>
-                      <p className="text-sm text-card-foreground">{t.description}</p>
-                      <p className="text-xs text-muted-foreground">{catName}</p>
-                    </div>
-                    <span className={`text-sm font-bold ${t.type === 'income' ? 'text-income' : 'text-alert'}`}>
-                      {t.type === 'income' ? '+' : '-'}${t.amount.toLocaleString('en-US', { minimumFractionDigits: 2 })}
-                    </span>
-                  </div>
-                );
-              })}
-            </div>
           </div>
         </div>
       )}

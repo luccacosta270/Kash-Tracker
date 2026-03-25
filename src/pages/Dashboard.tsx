@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { AppData, PennyState } from '@/lib/types';
-import { getCurrentMonthTransactions, getSpendingByCategory } from '@/lib/store';
+import { getCurrentMonthTransactions, getSpendingByCategory, getSavingsContributions } from '@/lib/store';
 import PennyMascot from '@/components/PennyMascot';
 import { TrendingUp, TrendingDown, Wallet, Target } from 'lucide-react';
 
@@ -15,12 +15,28 @@ export default function Dashboard({ data, updateData }: DashboardProps) {
   const totalIncome = monthly.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
   const totalExpense = monthly.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
   const netBalance = totalIncome - totalExpense;
-  const totalSaved = data.savingsGoal.monthlyTarget ? Math.max(0, totalIncome - totalExpense) : totalIncome - totalExpense;
+
+  const savingsFromCategories = useMemo(() => getSavingsContributions(data.transactions, data.categories), [data.transactions, data.categories]);
+
+  const totalSaved = data.savingsGoal.monthlyTarget
+    ? Math.max(savingsFromCategories, Math.max(0, totalIncome - totalExpense))
+    : totalIncome - totalExpense;
+
+  const savingsProgress = data.savingsGoal.monthlyTarget
+    ? Math.max(savingsFromCategories, Math.max(0, totalIncome - totalExpense))
+    : totalSaved;
 
   const spending = useMemo(() => getSpendingByCategory(data.transactions, data.categories), [data.transactions, data.categories]);
 
+  // Check if fixed transactions were just prefilled this session
+  const hasFixedPrefilled = useMemo(() => {
+    return data.categories.some(c => c.isFixed && c.planned > 0) &&
+      monthly.some(t => t.description.startsWith('[Fixed]'));
+  }, [data.categories, monthly]);
+
   const { pennyState, overCat } = useMemo(() => {
     if (!data.hasSeenWelcome) return { pennyState: 'welcome' as PennyState, overCat: undefined };
+
     const worst = spending.reduce<{ pct: number; name: string }>((w, s) => {
       if (s.category.planned > 0 && s.percentage > w.pct) return { pct: s.percentage, name: s.category.name };
       return w;
@@ -94,18 +110,23 @@ export default function Dashboard({ data, updateData }: DashboardProps) {
         ) : (
           <>
             <p className="text-2xl font-bold text-card-foreground">
-              ${totalSaved.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              ${savingsProgress.toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </p>
+            {savingsFromCategories > 0 && (
+              <p className="text-xs text-savings mt-1">
+                Includes ${savingsFromCategories.toLocaleString('en-US', { minimumFractionDigits: 2 })} from savings categories
+              </p>
+            )}
             {data.savingsGoal.monthlyTarget && (
               <div className="mt-2">
                 <div className="h-2 rounded-full bg-muted overflow-hidden">
                   <div
                     className="h-full rounded-full bg-savings transition-all"
-                    style={{ width: `${Math.min(100, (totalSaved / data.savingsGoal.monthlyTarget) * 100)}%` }}
+                    style={{ width: `${Math.min(100, (savingsProgress / data.savingsGoal.monthlyTarget) * 100)}%` }}
                   />
                 </div>
                 <p className="text-xs text-muted-foreground mt-1">
-                  {Math.round((totalSaved / data.savingsGoal.monthlyTarget) * 100)}% of ${data.savingsGoal.monthlyTarget.toLocaleString()} goal
+                  {Math.round((savingsProgress / data.savingsGoal.monthlyTarget) * 100)}% of ${data.savingsGoal.monthlyTarget.toLocaleString()} goal
                 </p>
               </div>
             )}

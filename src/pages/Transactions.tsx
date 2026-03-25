@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { AppData, Transaction } from '@/lib/types';
 import { generateId } from '@/lib/store';
 import { Plus } from 'lucide-react';
-import SwipeableTransaction from '@/components/SwipeableTransaction';
-import { ScrollArea } from '@/components/ui/scroll-area';
+import TransactionRow from '@/components/TransactionRow';
 
 interface TransactionsProps {
   data: AppData;
@@ -85,7 +84,7 @@ export default function Transactions({ data, updateData }: TransactionsProps) {
           </p>
           <div className="space-y-2">
             {txns.map(t => (
-              <SwipeableTransaction
+              <TransactionRow
                 key={t.id}
                 transaction={t}
                 categoryName={getCatName(t.categoryId)}

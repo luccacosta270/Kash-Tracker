@@ -19,6 +19,7 @@ const messages: Record<PennyState, (name?: string, cat?: string) => string> = {
   steady: (name) => `Right on target${greet(name)}. Everything is flowing exactly as planned. Keep it up!`,
   sweat: (name, cat) => `Oof${greet(name)}, we're cutting it close! Just a heads up—we've hit the limit for ${cat || 'a category'}.`,
   rescue: (name, cat) => `Change of plans${greet(name)}! We've gone over in ${cat || 'a category'}. Let's see where we can trim back to save the month.`,
+  newmonth: (name) => `Oink! I've already logged your fixed expenses for the month${greet(name)}. You're ahead of the game!`,
 };
 
 const images: Record<PennyState, string> = {
@@ -27,6 +28,7 @@ const images: Record<PennyState, string> = {
   steady: pennyAlert,
   sweat: pennyWorried,
   rescue: pennyWorried,
+  newmonth: pennyHappy,
 };
 
 export default function PennyMascot({ state, overBudgetCategory, userName }: PennyProps) {
