@@ -16,15 +16,10 @@ export default function Dashboard({ data, updateData }: DashboardProps) {
   const totalExpense = monthly.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
   const netBalance = totalIncome - totalExpense;
 
+  // Savings progress is ONLY from transactions in savings-flagged categories
   const savingsFromCategories = useMemo(() => getSavingsContributions(data.transactions, data.categories), [data.transactions, data.categories]);
 
-  const totalSaved = data.savingsGoal.monthlyTarget
-    ? Math.max(savingsFromCategories, Math.max(0, totalIncome - totalExpense))
-    : totalIncome - totalExpense;
-
-  const savingsProgress = data.savingsGoal.monthlyTarget
-    ? Math.max(savingsFromCategories, Math.max(0, totalIncome - totalExpense))
-    : totalSaved;
+  const savingsProgress = savingsFromCategories;
 
   const spending = useMemo(() => getSpendingByCategory(data.transactions, data.categories), [data.transactions, data.categories]);
 
