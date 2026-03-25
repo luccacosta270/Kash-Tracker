@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { AppData, PennyState } from '@/lib/types';
-import { getLiveMonthKey, getCurrentMonthTransactions, getSpendingByCategory, getSavingsContributions } from '@/lib/store';
+import { getLiveMonthKey, getCurrentMonthTransactions, getSpendingByCategory } from '@/lib/store';
 import PennyMascot from '@/components/PennyMascot';
 import { TrendingUp, TrendingDown, Wallet, Target } from 'lucide-react';
 
@@ -17,10 +17,14 @@ export default function Dashboard({ data, updateData }: DashboardProps) {
   const totalExpense = monthly.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
   const netBalance = totalIncome - totalExpense;
 
-  // Savings progress is ONLY from transactions in savings-flagged categories
-  const savingsFromCategories = useMemo(() => getSavingsContributions(data.transactions, data.categories), [data.transactions, data.categories]);
+  const savingsProgress = useMemo(() => {
+    const savingsCategoryIds = new Set(data.categories.filter(category => category.isSavings).map(category => category.id));
 
-  const savingsProgress = savingsFromCategories;
+    return monthly.reduce((sum, transaction) => {
+      if (transaction.type !== 'expense' || !savingsCategoryIds.has(transaction.categoryId)) return sum;
+      return sum + transaction.amount;
+    }, 0);
+  }, [monthly, data.categories]);
 
   const spending = useMemo(() => getSpendingByCategory(data.transactions, data.categories), [data.transactions, data.categories]);
   const autoLoggedThisMonth = data.lastAutoLogged?.monthKey === liveMonthKey ? data.lastAutoLogged : null;
@@ -110,7 +114,7 @@ export default function Dashboard({ data, updateData }: DashboardProps) {
             <p className="text-2xl font-bold text-card-foreground">
               ${savingsProgress.toLocaleString('en-US', { minimumFractionDigits: 2 })}
             </p>
-            {!data.savingsGoal.monthlyTarget && savingsFromCategories === 0 && (
+            {!data.savingsGoal.monthlyTarget && savingsProgress === 0 && (
               <p className="text-xs text-muted-foreground mt-1">
                 Mark categories as "Savings" to track progress here
               </p>
