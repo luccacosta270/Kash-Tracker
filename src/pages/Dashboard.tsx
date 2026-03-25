@@ -48,13 +48,14 @@ export default function Dashboard({ data, updateData }: DashboardProps) {
     setEditingGoal(false);
   };
 
+  const userName = data.profile.name || undefined;
+
   return (
     <div className="space-y-4 px-4 pt-4 pb-24">
       <div onClick={!data.hasSeenWelcome ? dismissWelcome : undefined} className={!data.hasSeenWelcome ? 'cursor-pointer' : ''}>
-        <PennyMascot state={pennyState} overBudgetCategory={overCat} />
+        <PennyMascot state={pennyState} overBudgetCategory={overCat} userName={userName} />
       </div>
 
-      {/* Big Three Stats */}
       <div className="grid grid-cols-1 gap-3">
         <StatCard icon={<Wallet className="h-5 w-5" />} label="Net Balance" value={netBalance} colorClass={netBalance >= 0 ? 'text-savings' : 'text-alert'} />
         <div className="grid grid-cols-2 gap-3">
@@ -63,7 +64,6 @@ export default function Dashboard({ data, updateData }: DashboardProps) {
         </div>
       </div>
 
-      {/* Savings Goal Card */}
       <div className="rounded-3xl bg-card p-5 shadow-card">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-2">
@@ -126,5 +126,3 @@ function StatCard({ icon, label, value, colorClass }: { icon: React.ReactNode; l
     </div>
   );
 }
-
-
