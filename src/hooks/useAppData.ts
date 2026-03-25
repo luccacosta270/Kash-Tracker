@@ -13,7 +13,11 @@ export function useAppData() {
   }, [data]);
 
   const updateData = useCallback((updater: (prev: AppData) => AppData) => {
-    setData(prev => updater(prev));
+    setData(prev => {
+      const next = updater(prev);
+      saveData(next);
+      return next;
+    });
   }, []);
 
   return { data, updateData };

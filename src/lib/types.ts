@@ -35,6 +35,12 @@ export interface MonthArchive {
   totalSaved: number;
 }
 
+export interface AutoLoggedSummary {
+  monthKey: string;
+  count: number;
+  names: string[];
+}
+
 export interface AppData {
   categories: Category[];
   transactions: Transaction[];
@@ -44,6 +50,7 @@ export interface AppData {
   archives: MonthArchive[];
   /** The month currently being viewed, null = current live month */
   viewingMonth: string | null;
+  lastAutoLogged: AutoLoggedSummary | null;
 }
 
 export type PennyState = 'welcome' | 'highfive' | 'steady' | 'sweat' | 'rescue' | 'newmonth';

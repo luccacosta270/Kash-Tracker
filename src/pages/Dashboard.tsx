@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { AppData, PennyState } from '@/lib/types';
-import { getCurrentMonthTransactions, getSpendingByCategory, getSavingsContributions } from '@/lib/store';
+import { getCurrentMonthKey, getCurrentMonthTransactions, getSpendingByCategory, getSavingsContributions } from '@/lib/store';
 import PennyMascot from '@/components/PennyMascot';
 import { TrendingUp, TrendingDown, Wallet, Target } from 'lucide-react';
 
@@ -10,6 +10,7 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ data, updateData }: DashboardProps) {
+  const currentMonthKey = getCurrentMonthKey();
   const monthly = useMemo(() => getCurrentMonthTransactions(data.transactions), [data.transactions]);
 
   const totalIncome = monthly.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
@@ -22,14 +23,10 @@ export default function Dashboard({ data, updateData }: DashboardProps) {
   const savingsProgress = savingsFromCategories;
 
   const spending = useMemo(() => getSpendingByCategory(data.transactions, data.categories), [data.transactions, data.categories]);
-
-  // Check if fixed transactions were just prefilled this session
-  const hasFixedPrefilled = useMemo(() => {
-    return data.categories.some(c => c.isFixed && c.planned > 0) &&
-      monthly.some(t => t.description.startsWith('[Fixed]'));
-  }, [data.categories, monthly]);
+  const autoLoggedThisMonth = data.lastAutoLogged?.monthKey === currentMonthKey ? data.lastAutoLogged : null;
 
   const { pennyState, overCat } = useMemo(() => {
+    if (autoLoggedThisMonth?.count) return { pennyState: 'newmonth' as PennyState, overCat: undefined };
     if (!data.hasSeenWelcome) return { pennyState: 'welcome' as PennyState, overCat: undefined };
 
     const worst = spending.reduce<{ pct: number; name: string }>((w, s) => {
@@ -41,7 +38,7 @@ export default function Dashboard({ data, updateData }: DashboardProps) {
     if (worst.pct > 95) return { pennyState: 'sweat' as PennyState, overCat: worst.name };
     if (worst.pct > 70) return { pennyState: 'steady' as PennyState, overCat: undefined };
     return { pennyState: 'highfive' as PennyState, overCat: undefined };
-  }, [data.hasSeenWelcome, spending]);
+  }, [autoLoggedThisMonth, data.hasSeenWelcome, spending]);
 
   const dismissWelcome = () => {
     updateData(d => ({ ...d, hasSeenWelcome: true }));
@@ -64,7 +61,13 @@ export default function Dashboard({ data, updateData }: DashboardProps) {
   return (
     <div className="space-y-4 px-4 pt-4 pb-24">
       <div onClick={!data.hasSeenWelcome ? dismissWelcome : undefined} className={!data.hasSeenWelcome ? 'cursor-pointer' : ''}>
-        <PennyMascot state={pennyState} overBudgetCategory={overCat} userName={userName} />
+        <PennyMascot
+          state={pennyState}
+          overBudgetCategory={overCat}
+          userName={userName}
+          autoLoggedCount={autoLoggedThisMonth?.count}
+          autoLoggedNames={autoLoggedThisMonth?.names}
+        />
       </div>
 
       <div className="grid grid-cols-1 gap-3">
