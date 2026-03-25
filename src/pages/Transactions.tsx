@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { AppData, Transaction } from '@/lib/types';
-import { generateId } from '@/lib/store';
+import { generateId, getLiveMonthKey } from '@/lib/store';
 import { Plus } from 'lucide-react';
 import TransactionRow from '@/components/TransactionRow';
 
@@ -15,7 +15,8 @@ export default function Transactions({ data, updateData }: TransactionsProps) {
   const [categoryId, setCategoryId] = useState(data.categories[0]?.id || '');
   const [description, setDescription] = useState('');
   const [amount, setAmount] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
+  const getDefaultDate = () => `${getLiveMonthKey(data.transactions)}-01`;
+  const [date, setDate] = useState(getDefaultDate());
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const sorted = [...data.transactions].sort((a, b) => b.date.localeCompare(a.date));
@@ -31,7 +32,7 @@ export default function Transactions({ data, updateData }: TransactionsProps) {
     setDescription('');
     setAmount('');
     setType('expense');
-    setDate(new Date().toISOString().split('T')[0]);
+    setDate(getDefaultDate());
   };
 
   const addTransaction = () => {

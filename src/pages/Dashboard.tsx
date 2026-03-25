@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { AppData, PennyState } from '@/lib/types';
-import { getCurrentMonthKey, getCurrentMonthTransactions, getSpendingByCategory, getSavingsContributions } from '@/lib/store';
+import { getLiveMonthKey, getCurrentMonthTransactions, getSpendingByCategory, getSavingsContributions } from '@/lib/store';
 import PennyMascot from '@/components/PennyMascot';
 import { TrendingUp, TrendingDown, Wallet, Target } from 'lucide-react';
 
@@ -10,7 +10,7 @@ interface DashboardProps {
 }
 
 export default function Dashboard({ data, updateData }: DashboardProps) {
-  const currentMonthKey = getCurrentMonthKey();
+  const liveMonthKey = getLiveMonthKey(data.transactions);
   const monthly = useMemo(() => getCurrentMonthTransactions(data.transactions), [data.transactions]);
 
   const totalIncome = monthly.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
@@ -23,7 +23,7 @@ export default function Dashboard({ data, updateData }: DashboardProps) {
   const savingsProgress = savingsFromCategories;
 
   const spending = useMemo(() => getSpendingByCategory(data.transactions, data.categories), [data.transactions, data.categories]);
-  const autoLoggedThisMonth = data.lastAutoLogged?.monthKey === currentMonthKey ? data.lastAutoLogged : null;
+  const autoLoggedThisMonth = data.lastAutoLogged?.monthKey === liveMonthKey ? data.lastAutoLogged : null;
 
   const { pennyState, overCat } = useMemo(() => {
     if (autoLoggedThisMonth?.count) return { pennyState: 'newmonth' as PennyState, overCat: undefined };
