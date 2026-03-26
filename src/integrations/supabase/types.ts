@@ -14,7 +14,183 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      app_settings: {
+        Row: {
+          created_at: string
+          has_seen_welcome: boolean
+          id: string
+          last_auto_logged: Json | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          has_seen_welcome?: boolean
+          id?: string
+          last_auto_logged?: Json | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          has_seen_welcome?: boolean
+          id?: string
+          last_auto_logged?: Json | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      archives: {
+        Row: {
+          categories_snapshot: Json
+          created_at: string
+          id: string
+          label: string
+          month_key: string
+          savings_goal_snapshot: Json
+          total_expense: number
+          total_income: number
+          total_saved: number
+          transactions_snapshot: Json
+          user_id: string
+        }
+        Insert: {
+          categories_snapshot?: Json
+          created_at?: string
+          id?: string
+          label: string
+          month_key: string
+          savings_goal_snapshot?: Json
+          total_expense?: number
+          total_income?: number
+          total_saved?: number
+          transactions_snapshot?: Json
+          user_id: string
+        }
+        Update: {
+          categories_snapshot?: Json
+          created_at?: string
+          id?: string
+          label?: string
+          month_key?: string
+          savings_goal_snapshot?: Json
+          total_expense?: number
+          total_income?: number
+          total_saved?: number
+          transactions_snapshot?: Json
+          user_id?: string
+        }
+        Relationships: []
+      }
+      categories: {
+        Row: {
+          created_at: string
+          id: string
+          is_fixed: boolean
+          is_savings: boolean
+          local_id: string
+          name: string
+          planned: number
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_fixed?: boolean
+          is_savings?: boolean
+          local_id?: string
+          name: string
+          planned?: number
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_fixed?: boolean
+          is_savings?: boolean
+          local_id?: string
+          name?: string
+          planned?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      savings_goals: {
+        Row: {
+          created_at: string
+          id: string
+          monthly_target: number | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          monthly_target?: number | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          monthly_target?: number | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      transactions: {
+        Row: {
+          amount: number
+          category_local_id: string
+          created_at: string
+          date: string
+          description: string
+          id: string
+          local_id: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          amount?: number
+          category_local_id?: string
+          created_at?: string
+          date: string
+          description?: string
+          id?: string
+          local_id?: string
+          type?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          category_local_id?: string
+          created_at?: string
+          date?: string
+          description?: string
+          id?: string
+          local_id?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
