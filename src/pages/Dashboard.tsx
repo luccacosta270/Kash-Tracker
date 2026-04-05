@@ -89,6 +89,9 @@ export default function Dashboard({ data, updateData }: DashboardProps) {
           userName={userName}
           autoLoggedCount={autoLoggedThisMonth?.count}
           autoLoggedNames={autoLoggedThisMonth?.names}
+          totalIncome={totalIncome}
+          totalExpense={totalExpense}
+          netBalance={netBalance}
         />
       </div>
 

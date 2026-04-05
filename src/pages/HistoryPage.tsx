@@ -3,6 +3,7 @@ import { AppData, Transaction } from '@/lib/types';
 import { generateId, getSpendingByCategory } from '@/lib/store';
 import { TrendingUp, TrendingDown, Wallet, Plus } from 'lucide-react';
 import TransactionRow from '@/components/TransactionRow';
+import MonthlyInsight from '@/components/MonthlyInsight';
 
 interface HistoryPageProps {
   data: AppData;
@@ -16,19 +17,22 @@ export default function HistoryPage({ data, updateData, page }: HistoryPageProps
 
   if (!archive) return <div className="px-4 pt-4"><p className="text-muted-foreground">Archive not found.</p></div>;
 
-  if (page === 'home') return <HistoryDashboard archive={archive} />;
+  if (page === 'home') return <HistoryDashboard archive={archive} userName={data.profile.name || undefined} />;
   if (page === 'transactions') return <HistoryTransactions archive={archive} data={data} updateData={updateData} />;
   if (page === 'budget') return <HistoryBudget archive={archive} />;
 
   return null;
 }
 
-function HistoryDashboard({ archive }: { archive: AppData['archives'][0] }) {
+function HistoryDashboard({ archive, userName }: { archive: AppData['archives'][0]; userName?: string }) {
   return (
     <div className="space-y-4 px-4 pt-4 pb-24">
       <div className="rounded-3xl bg-income/10 p-3 text-center">
         <p className="text-sm font-semibold text-income">📅 {archive.label}</p>
       </div>
+
+      <MonthlyInsight archive={archive} userName={userName} />
+
       <StatCard icon={<Wallet className="h-5 w-5" />} label="Net Balance" value={archive.totalIncome - archive.totalExpense} colorClass={(archive.totalIncome - archive.totalExpense) >= 0 ? 'text-savings' : 'text-alert'} />
       <div className="grid grid-cols-2 gap-3">
         <StatCard icon={<TrendingDown className="h-5 w-5" />} label="Total Spent" value={-archive.totalExpense} colorClass="text-alert" />
