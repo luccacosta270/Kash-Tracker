@@ -17,7 +17,7 @@ export default function HistoryPage({ data, updateData, page }: HistoryPageProps
 
   if (!archive) return <div className="px-4 pt-4"><p className="text-muted-foreground">Archive not found.</p></div>;
 
-  if (page === 'home') return <HistoryDashboard archive={archive} />;
+  if (page === 'home') return <HistoryDashboard archive={archive} userName={data.profile.name || undefined} />;
   if (page === 'transactions') return <HistoryTransactions archive={archive} data={data} updateData={updateData} />;
   if (page === 'budget') return <HistoryBudget archive={archive} />;
 
