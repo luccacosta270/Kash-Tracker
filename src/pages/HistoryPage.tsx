@@ -23,12 +23,15 @@ export default function HistoryPage({ data, updateData, page }: HistoryPageProps
   return null;
 }
 
-function HistoryDashboard({ archive }: { archive: AppData['archives'][0] }) {
+function HistoryDashboard({ archive, userName }: { archive: AppData['archives'][0]; userName?: string }) {
   return (
     <div className="space-y-4 px-4 pt-4 pb-24">
       <div className="rounded-3xl bg-income/10 p-3 text-center">
         <p className="text-sm font-semibold text-income">📅 {archive.label}</p>
       </div>
+
+      <MonthlyInsight archive={archive} userName={userName} />
+
       <StatCard icon={<Wallet className="h-5 w-5" />} label="Net Balance" value={archive.totalIncome - archive.totalExpense} colorClass={(archive.totalIncome - archive.totalExpense) >= 0 ? 'text-savings' : 'text-alert'} />
       <div className="grid grid-cols-2 gap-3">
         <StatCard icon={<TrendingDown className="h-5 w-5" />} label="Total Spent" value={-archive.totalExpense} colorClass="text-alert" />

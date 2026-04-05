@@ -72,12 +72,19 @@ export default function AuthPage() {
           </button>
         </form>
 
-        <p className="text-center text-sm text-muted-foreground">
-          {isLogin ? "Don't have an account?" : 'Already have an account?'}{' '}
-          <button onClick={() => setIsLogin(!isLogin)} className="text-primary font-medium">
-            {isLogin ? 'Sign Up' : 'Sign In'}
-          </button>
-        </p>
+        <div className="text-center space-y-2">
+          {isLogin && (
+            <p className="text-sm">
+              <a href="/reset-password" className="text-primary font-medium">Forgot password?</a>
+            </p>
+          )}
+          <p className="text-sm text-muted-foreground">
+            {isLogin ? "Don't have an account?" : 'Already have an account?'}{' '}
+            <button onClick={() => setIsLogin(!isLogin)} className="text-primary font-medium">
+              {isLogin ? 'Sign Up' : 'Sign In'}
+            </button>
+          </p>
+        </div>
       </div>
     </div>
   );
