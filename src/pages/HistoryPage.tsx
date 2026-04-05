@@ -3,6 +3,7 @@ import { AppData, Transaction } from '@/lib/types';
 import { generateId, getSpendingByCategory } from '@/lib/store';
 import { TrendingUp, TrendingDown, Wallet, Plus } from 'lucide-react';
 import TransactionRow from '@/components/TransactionRow';
+import MonthlyInsight from '@/components/MonthlyInsight';
 
 interface HistoryPageProps {
   data: AppData;
