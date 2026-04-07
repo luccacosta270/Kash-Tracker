@@ -136,6 +136,16 @@ export function useCloudData(userId: string | undefined) {
     loadFromCloud();
   }, [loadFromCloud]);
 
+  // Re-sync when coming back online
+  useEffect(() => {
+    const handleOnline = () => {
+      toast.success("Purr! Back online. Syncing your data... 🐱☁️");
+      loadFromCloud();
+    };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, [loadFromCloud]);
+
   // Auto-save to cloud with debounce
   const updateData = useCallback((updater: (prev: AppData) => AppData) => {
     setData(prev => {
