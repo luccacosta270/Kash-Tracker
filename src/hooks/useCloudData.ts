@@ -26,10 +26,24 @@ export function useCloudData(userId: string | undefined) {
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
   const lastSavedJson = useRef('');
 
-  // Load from cloud
+  // Load from cloud (with offline fallback)
   const loadFromCloud = useCallback(async () => {
     if (!userId) return;
     try {
+      // Check if we're online
+      if (!navigator.onLine) {
+        const cached = localStorage.getItem(STORAGE_KEY);
+        if (cached) {
+          const parsed = JSON.parse(cached) as AppData;
+          const filled = prefillFixedTransactions({ ...defaultData, ...parsed, viewingMonth: null });
+          setData(filled);
+          lastSavedJson.current = JSON.stringify(filled);
+          setSyncStatus('error');
+          toast.info("Meow! You're offline. Kash loaded your cached data. 🐱📦");
+          setLoading(false);
+          return;
+        }
+      }
       const [profileRes, catsRes, txnsRes, goalRes, archivesRes, settingsRes] = await Promise.all([
         supabase.from('profiles').select('*').eq('user_id', userId).single(),
         supabase.from('categories').select('*').eq('user_id', userId).order('created_at'),
@@ -120,6 +134,16 @@ export function useCloudData(userId: string | undefined) {
 
   useEffect(() => {
     loadFromCloud();
+  }, [loadFromCloud]);
+
+  // Re-sync when coming back online
+  useEffect(() => {
+    const handleOnline = () => {
+      toast.success("Purr! Back online. Syncing your data... 🐱☁️");
+      loadFromCloud();
+    };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
   }, [loadFromCloud]);
 
   // Auto-save to cloud with debounce
