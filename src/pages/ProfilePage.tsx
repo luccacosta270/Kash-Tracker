@@ -1,8 +1,9 @@
-import { useState } from 'react';
-import { AppData } from '@/lib/types';
-import { archiveMonth } from '@/lib/store';
+import { useState, useMemo } from 'react';
+import { AppData, InsightPreferences } from '@/lib/types';
+import { archiveMonth, getCurrentMonthTransactions } from '@/lib/store';
 import { Archive, ChevronRight, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
+import HomeInsightPreferences from '@/components/HomeInsightPreferences';
 
 interface ProfileProps {
   data: AppData;
