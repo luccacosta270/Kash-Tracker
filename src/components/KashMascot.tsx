@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { KashState } from '@/lib/types';
+import { KashState, InsightPreferences, InsightCategory, DEFAULT_INSIGHT_PREFS } from '@/lib/types';
 import { supabase } from '@/integrations/supabase/client';
 import kashHappy from '@/assets/kash-happy.png';
 import kashCool from '@/assets/kash-cool.png';
@@ -14,6 +14,7 @@ interface KashProps {
   totalIncome?: number;
   totalExpense?: number;
   netBalance?: number;
+  preferences?: InsightPreferences;
 }
 
 function greet(name?: string) {
@@ -38,28 +39,87 @@ const images: Record<KashState, string> = {
   darkmode: kashCool,
 };
 
-export default function KashMascot({ state, overBudgetCategory, userName, autoLoggedCount, autoLoggedNames, totalIncome, totalExpense, netBalance }: KashProps) {
+const CACHE_KEY = 'kash-insight-cache';
+
+interface InsightCache {
+  message: string;
+  category: InsightCategory;
+  prefsHash: string;
+  timestamp: number;
+}
+
+function pickCategoryForToday(categories: InsightCategory[]): InsightCategory {
+  if (categories.length === 0) return 'smart';
+  if (categories.length === 1) return categories[0];
+  // Rotate one per day based on day-of-year
+  const start = new Date(new Date().getFullYear(), 0, 0);
+  const diff = Date.now() - start.getTime();
+  const dayOfYear = Math.floor(diff / 86400000);
+  return categories[dayOfYear % categories.length];
+}
+
+function shouldRefresh(cache: InsightCache | null, refresh: 'daily' | 'open' | 'weekly', prefsHash: string): boolean {
+  if (!cache || cache.prefsHash !== prefsHash) return true;
+  const now = Date.now();
+  if (refresh === 'open') return true;
+  if (refresh === 'daily') return now - cache.timestamp > 24 * 60 * 60 * 1000;
+  if (refresh === 'weekly') return now - cache.timestamp > 7 * 24 * 60 * 60 * 1000;
+  return true;
+}
+
+export default function KashMascot({ state, overBudgetCategory, userName, autoLoggedCount, autoLoggedNames, totalIncome, totalExpense, netBalance, preferences }: KashProps) {
+  const prefs = preferences || DEFAULT_INSIGHT_PREFS;
   const [aiMessage, setAiMessage] = useState<string | null>(null);
   const [loadingAi, setLoadingAi] = useState(false);
 
-  // Fetch AI greeting on mount (only for non-welcome, non-alert states)
+  // Fetch AI greeting on mount (only for non-welcome, non-alert states, and only if enabled)
   useEffect(() => {
     if (state === 'welcome' || state === 'alert') return;
-    
+    if (!prefs.enabled) {
+      setAiMessage(null);
+      return;
+    }
+
+    const category = pickCategoryForToday(prefs.categories);
+    const prefsHash = JSON.stringify({ c: category, l: prefs.length, h: prefs.humor });
+
+    // Check cache
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      const cache: InsightCache | null = raw ? JSON.parse(raw) : null;
+      if (!shouldRefresh(cache, prefs.refresh, prefsHash) && cache) {
+        setAiMessage(cache.message);
+        return;
+      }
+    } catch {}
+
     let cancelled = false;
     const fetchGreeting = async () => {
       setLoadingAi(true);
       try {
-        const { data, error } = await supabase.functions.invoke('kash-greeting', {
+        const { data } = await supabase.functions.invoke('kash-greeting', {
           body: {
             type: 'greeting',
             userName: userName || '',
             totalIncome: totalIncome || 0,
             totalExpense: totalExpense || 0,
             netBalance: netBalance || 0,
+            category,
+            length: prefs.length,
+            humor: prefs.humor,
           },
         });
-        if (!cancelled && data?.message) setAiMessage(data.message);
+        if (!cancelled && data?.message) {
+          setAiMessage(data.message);
+          try {
+            localStorage.setItem(CACHE_KEY, JSON.stringify({
+              message: data.message,
+              category,
+              prefsHash,
+              timestamp: Date.now(),
+            } satisfies InsightCache));
+          } catch {}
+        }
       } catch {
         // Use fallback
       } finally {
@@ -68,10 +128,10 @@ export default function KashMascot({ state, overBudgetCategory, userName, autoLo
     };
     fetchGreeting();
     return () => { cancelled = true; };
-  }, [state, userName]);
+  }, [state, userName, prefs.enabled, prefs.refresh, prefs.length, prefs.humor, prefs.categories.join(',')]);
 
   const fallback = fallbackMessages[state](userName, overBudgetCategory);
-  const message = (state === 'welcome' || state === 'alert') ? fallback : (aiMessage || fallback);
+  const message = (state === 'welcome' || state === 'alert' || !prefs.enabled) ? fallback : (aiMessage || fallback);
 
   return (
     <div className="flex items-start gap-3 rounded-3xl bg-card p-4 shadow-card animate-bounce-in">

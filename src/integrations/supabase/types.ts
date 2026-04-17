@@ -19,6 +19,7 @@ export type Database = {
           created_at: string
           has_seen_welcome: boolean
           id: string
+          insight_preferences: Json
           last_auto_logged: Json | null
           user_id: string
         }
@@ -26,6 +27,7 @@ export type Database = {
           created_at?: string
           has_seen_welcome?: boolean
           id?: string
+          insight_preferences?: Json
           last_auto_logged?: Json | null
           user_id: string
         }
@@ -33,6 +35,7 @@ export type Database = {
           created_at?: string
           has_seen_welcome?: boolean
           id?: string
+          insight_preferences?: Json
           last_auto_logged?: Json | null
           user_id?: string
         }

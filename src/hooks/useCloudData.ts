@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { AppData, Category, Transaction, MonthArchive, SavingsGoal } from '@/lib/types';
+import { AppData, Category, Transaction, MonthArchive, SavingsGoal, DEFAULT_INSIGHT_PREFS, InsightPreferences } from '@/lib/types';
 import { prefillFixedTransactions } from '@/lib/store';
 import { toast } from 'sonner';
 
@@ -15,6 +15,7 @@ const defaultData: AppData = {
   archives: [],
   viewingMonth: null,
   lastAutoLogged: null,
+  insightPreferences: DEFAULT_INSIGHT_PREFS,
 };
 
 export type SyncStatus = 'synced' | 'syncing' | 'error';
@@ -90,6 +91,10 @@ export function useCloudData(userId: string | undefined) {
         archives,
         viewingMonth: null,
         lastAutoLogged: settingsRes.data?.last_auto_logged as any || null,
+        insightPreferences: {
+          ...DEFAULT_INSIGHT_PREFS,
+          ...((settingsRes.data as any)?.insight_preferences as Partial<InsightPreferences> | undefined),
+        },
       };
 
       // If cloud is empty, check localStorage for migration
@@ -248,5 +253,6 @@ async function saveToCloud(userId: string, data: AppData) {
     user_id: userId,
     has_seen_welcome: data.hasSeenWelcome,
     last_auto_logged: data.lastAutoLogged as any,
-  }, { onConflict: 'user_id' });
+    insight_preferences: data.insightPreferences as any,
+  } as any, { onConflict: 'user_id' });
 }

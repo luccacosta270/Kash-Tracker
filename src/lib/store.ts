@@ -1,4 +1,4 @@
-import { AppData, Category, Transaction, MonthArchive } from './types';
+import { AppData, Category, Transaction, MonthArchive, DEFAULT_INSIGHT_PREFS } from './types';
 
 const STORAGE_KEY = 'mytracker-data';
 
@@ -19,6 +19,7 @@ const defaultData: AppData = {
   archives: [],
   viewingMonth: null,
   lastAutoLogged: null,
+  insightPreferences: DEFAULT_INSIGHT_PREFS,
 };
 
 function formatMonthKey(date: Date): string {
