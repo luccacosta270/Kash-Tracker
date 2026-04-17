@@ -36,6 +36,7 @@ export default function HomeInsightPreferences({ preferences, userName, totalInc
   const prefs = preferences || DEFAULT_INSIGHT_PREFS;
   const [previewMessage, setPreviewMessage] = useState<string | null>(null);
   const [previewLoading, setPreviewLoading] = useState(false);
+  const [open, setOpen] = useState(false);
 
   const toggleCategory = (cat: InsightCategory) => {
     const has = prefs.categories.includes(cat);
@@ -80,15 +81,24 @@ export default function HomeInsightPreferences({ preferences, userName, totalInc
 
   return (
     <div className="rounded-3xl bg-card p-5 shadow-card space-y-4">
-      <div className="flex items-start justify-between gap-3">
-        <div>
+      <button
+        onClick={() => setOpen(o => !o)}
+        className="w-full flex items-start justify-between gap-3 text-left"
+        aria-expanded={open}
+      >
+        <div className="flex-1 min-w-0">
           <h3 className="text-sm font-semibold text-card-foreground">Home Insight Preferences</h3>
           <p className="text-xs text-muted-foreground mt-0.5">Pick what Kash says on your dashboard.</p>
         </div>
-        <Toggle checked={prefs.enabled} onChange={setEnabled} />
-      </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <span onClick={e => e.stopPropagation()}>
+            <Toggle checked={prefs.enabled} onChange={setEnabled} />
+          </span>
+          <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${open ? 'rotate-180' : ''}`} />
+        </div>
+      </button>
 
-      {prefs.enabled && (
+      {open && prefs.enabled && (
         <>
           {/* Categories */}
           <div className="space-y-2">
