@@ -29,6 +29,14 @@ export default function ProfilePage({ data, updateData, onViewMonth }: ProfilePr
     toast.success('Month archived! Spending reset.');
   };
 
+  const monthly = useMemo(() => getCurrentMonthTransactions(data.transactions), [data.transactions]);
+  const totalIncome = monthly.filter(t => t.type === 'income').reduce((s, t) => s + t.amount, 0);
+  const totalExpense = monthly.filter(t => t.type === 'expense').reduce((s, t) => s + t.amount, 0);
+
+  const updateInsightPrefs = (next: InsightPreferences) => {
+    updateData(d => ({ ...d, insightPreferences: next }));
+  };
+
   return (
     <div className="px-4 pt-4 pb-24 space-y-4">
       <h2 className="text-lg font-bold text-foreground">Profile</h2>
@@ -46,6 +54,16 @@ export default function ProfilePage({ data, updateData, onViewMonth }: ProfilePr
           Save Name
         </button>
       </div>
+
+      {/* Home Insight Preferences */}
+      <HomeInsightPreferences
+        preferences={data.insightPreferences}
+        userName={data.profile.name}
+        totalIncome={totalIncome}
+        totalExpense={totalExpense}
+        netBalance={totalIncome - totalExpense}
+        onChange={updateInsightPrefs}
+      />
 
       {/* Manage Month - Collapsed */}
       <div className="rounded-3xl bg-card p-4 shadow-card">
