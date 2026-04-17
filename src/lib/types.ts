@@ -40,6 +40,26 @@ export interface AutoLoggedSummary {
   names: string[];
 }
 
+export type InsightCategory = 'smart' | 'stocks' | 'savings' | 'coach' | 'summary' | 'funny';
+export type InsightRefresh = 'daily' | 'open' | 'weekly';
+export type InsightLength = 'short' | 'detailed';
+
+export interface InsightPreferences {
+  enabled: boolean;
+  categories: InsightCategory[];
+  refresh: InsightRefresh;
+  length: InsightLength;
+  humor: boolean;
+}
+
+export const DEFAULT_INSIGHT_PREFS: InsightPreferences = {
+  enabled: true,
+  categories: ['smart'],
+  refresh: 'daily',
+  length: 'short',
+  humor: true,
+};
+
 export interface AppData {
   categories: Category[];
   transactions: Transaction[];
@@ -50,6 +70,7 @@ export interface AppData {
   /** The month currently being viewed, null = current live month */
   viewingMonth: string | null;
   lastAutoLogged: AutoLoggedSummary | null;
+  insightPreferences: InsightPreferences;
 }
 
 export type KashState = 'welcome' | 'happy' | 'cool' | 'alert' | 'newmonth' | 'darkmode';
