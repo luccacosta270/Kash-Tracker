@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { InsightPreferences, InsightCategory, InsightRefresh, InsightLength, DEFAULT_INSIGHT_PREFS } from '@/lib/types';
 import { supabase } from '@/integrations/supabase/client';
-import { Sparkles, TrendingUp, PiggyBank, Bot, BarChart3, Cat, Eye, RefreshCw } from 'lucide-react';
+import { Sparkles, PiggyBank, Bot, BarChart3, Cat, Eye, RefreshCw, ChevronDown } from 'lucide-react';
 import { toast } from 'sonner';
 
 interface Props {
@@ -15,7 +15,6 @@ interface Props {
 
 const CATEGORY_OPTIONS: { id: InsightCategory; label: string; description: string; icon: React.ReactNode }[] = [
   { id: 'smart', label: 'Smart Financial Insights', description: 'Budget progress, trends, savings pace', icon: <Sparkles className="h-4 w-4" /> },
-  { id: 'stocks', label: 'Stock Market Updates', description: 'S&P 500, Nasdaq, investing reminders', icon: <TrendingUp className="h-4 w-4" /> },
   { id: 'savings', label: 'Savings Motivation', description: 'Encouragement to keep saving', icon: <PiggyBank className="h-4 w-4" /> },
   { id: 'coach', label: 'AI Budget Coach', description: 'Recommendations based on habits', icon: <Bot className="h-4 w-4" /> },
   { id: 'summary', label: 'Monthly Expense Summary', description: 'Top categories, totals, remaining', icon: <BarChart3 className="h-4 w-4" /> },
