@@ -92,6 +92,7 @@ export default function Dashboard({ data, updateData }: DashboardProps) {
           totalIncome={totalIncome}
           totalExpense={totalExpense}
           netBalance={netBalance}
+          preferences={data.insightPreferences}
         />
       </div>
 
