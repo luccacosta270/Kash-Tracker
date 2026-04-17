@@ -253,5 +253,6 @@ async function saveToCloud(userId: string, data: AppData) {
     user_id: userId,
     has_seen_welcome: data.hasSeenWelcome,
     last_auto_logged: data.lastAutoLogged as any,
-  }, { onConflict: 'user_id' });
+    insight_preferences: data.insightPreferences as any,
+  } as any, { onConflict: 'user_id' });
 }
