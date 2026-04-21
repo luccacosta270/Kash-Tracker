@@ -5,7 +5,7 @@ Live Demo: https://piggy-cents-tracker.lovable.app
 ---
 ## Overview
 
-Piggy Cents Tracker is a personal finance web application designed to help users track income, expenses, and savings in a simple and structured way.
+Kash Tracker is a personal finance web application designed to help users track income, expenses, and savings in a simple and structured way.
 
 The app provides a clear monthly overview of financial activity, allowing users to understand where their money is going and stay in control of their spending.
 
