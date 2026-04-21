@@ -97,9 +97,9 @@ export default function Dashboard({ data, updateData }: DashboardProps) {
       </div>
 
       <div className="grid grid-cols-1 gap-3">
-        <StatCard icon={<Wallet className="h-5 w-5" />} label="Net Balance" value={netBalance} colorClass={netBalance >= 0 ? 'text-savings' : 'text-alert'} />
+        <StatCard icon={<Wallet className="h-5 w-5" />} label="Net Balance This Month" value={netBalance} colorClass={netBalance >= 0 ? 'text-savings' : 'text-alert'} />
         <div className="grid grid-cols-2 gap-3">
-          <StatCard icon={<TrendingDown className="h-5 w-5" />} label="Monthly Spend" value={-totalExpense} colorClass="text-alert" />
+          <StatCard icon={<TrendingDown className="h-5 w-5" />} label="Monthly Expenses" value={-totalExpense} colorClass="text-alert" />
           <StatCard icon={<TrendingUp className="h-5 w-5" />} label="Total Income" value={totalIncome} colorClass="text-income" />
         </div>
       </div>
