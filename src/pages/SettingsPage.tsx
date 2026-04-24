@@ -135,10 +135,6 @@ export default function SettingsPage({ data, updateData }: SettingsProps) {
         ))}
       </div>
 
-      {/* Reset */}
-      <button onClick={resetAll} className="w-full rounded-xl bg-destructive py-3 text-sm font-medium text-destructive-foreground touch-target">
-        Reset All Data
-      </button>
     </div>
   );
 }
