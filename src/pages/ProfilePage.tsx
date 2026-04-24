@@ -1,7 +1,7 @@
 import { useState, useMemo } from 'react';
 import { AppData, InsightPreferences } from '@/lib/types';
 import { archiveMonth, getCurrentMonthTransactions } from '@/lib/store';
-import { Archive, ChevronRight, ChevronDown } from 'lucide-react';
+import { Archive, ChevronRight, ChevronDown, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import HomeInsightPreferences from '@/components/HomeInsightPreferences';
 
@@ -14,6 +14,7 @@ interface ProfileProps {
 export default function ProfilePage({ data, updateData, onViewMonth }: ProfileProps) {
   const [nameInput, setNameInput] = useState(data.profile.name);
   const [showManageMonth, setShowManageMonth] = useState(false);
+  const [showReset, setShowReset] = useState(false);
 
   const saveName = () => {
     updateData(d => ({ ...d, profile: { ...d.profile, name: nameInput.trim() } }));
@@ -35,6 +36,13 @@ export default function ProfilePage({ data, updateData, onViewMonth }: ProfilePr
 
   const updateInsightPrefs = (next: InsightPreferences) => {
     updateData(d => ({ ...d, insightPreferences: next }));
+  };
+
+  const handleResetAll = () => {
+    if (!confirm('This will delete ALL data permanently. Are you sure?')) return;
+    if (!confirm('Last chance — this cannot be undone. Reset everything?')) return;
+    localStorage.removeItem('mytracker-data');
+    window.location.reload();
   };
 
   return (
@@ -109,6 +117,32 @@ export default function ProfilePage({ data, updateData, onViewMonth }: ProfilePr
           </div>
         </div>
       )}
+
+      {/* Reset - Collapsed */}
+      <div className="rounded-3xl bg-card p-4 shadow-card">
+        <button
+          onClick={() => setShowReset(!showReset)}
+          className="flex items-center justify-between w-full text-sm text-muted-foreground"
+        >
+          <span className="flex items-center gap-2">
+            <AlertTriangle className="h-4 w-4" /> Reset
+          </span>
+          <ChevronDown className={`h-4 w-4 transition-transform ${showReset ? 'rotate-180' : ''}`} />
+        </button>
+        {showReset && (
+          <div className="mt-3 space-y-2">
+            <p className="text-xs text-muted-foreground">
+              Permanently delete all transactions, categories, archives, and preferences. This cannot be undone.
+            </p>
+            <button
+              onClick={handleResetAll}
+              className="w-full rounded-xl bg-destructive py-2.5 text-xs font-medium text-destructive-foreground touch-target"
+            >
+              Reset All Data
+            </button>
+          </div>
+        )}
+      </div>
     </div>
   );
 }
