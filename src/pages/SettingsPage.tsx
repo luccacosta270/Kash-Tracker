@@ -68,13 +68,6 @@ export default function SettingsPage({ data, updateData }: SettingsProps) {
     setEditId(null);
   };
 
-  const resetAll = () => {
-    if (confirm('This will delete ALL data. Are you sure?')) {
-      localStorage.removeItem('mytracker-data');
-      window.location.reload();
-    }
-  };
-
   return (
     <div className="px-4 pt-4 pb-24 space-y-6">
       <h2 className="text-lg font-bold text-foreground">Category Manager</h2>
