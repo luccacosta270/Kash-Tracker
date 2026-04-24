@@ -1,7 +1,12 @@
 import { useState } from 'react';
 import { AppData, Transaction } from '@/lib/types';
 import { generateId } from '@/lib/store';
-import { Plus } from 'lucide-react';
+import { Plus, CalendarIcon } from 'lucide-react';
+import { format } from 'date-fns';
+import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 import TransactionRow from '@/components/TransactionRow';
 
 interface TransactionsProps {
@@ -39,6 +44,24 @@ export default function Transactions({ data, updateData }: TransactionsProps) {
     setAmount('');
     setType('expense');
     setDate(getDefaultDate());
+  };
+
+  const openAddForm = () => {
+    resetForm();
+    setDate(getDefaultDate());
+    setShowForm(true);
+  };
+
+  const dateToLocal = (iso: string) => {
+    const [y, m, d] = iso.split('-').map(Number);
+    return new Date(y, m - 1, d, 12, 0, 0);
+  };
+
+  const localToIso = (d: Date) => {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
   };
 
   const addTransaction = () => {
@@ -109,7 +132,7 @@ export default function Transactions({ data, updateData }: TransactionsProps) {
 
       {/* FAB */}
       <button
-        onClick={() => { resetForm(); setShowForm(true); }}
+        onClick={openAddForm}
         className="fixed bottom-20 right-4 z-50 flex h-14 w-14 items-center justify-center rounded-full bg-primary shadow-lg text-primary-foreground touch-target"
       >
         <Plus className="h-6 w-6" />
@@ -137,7 +160,29 @@ export default function Transactions({ data, updateData }: TransactionsProps) {
               ))}
             </div>
 
-            <input type="date" value={date} onChange={e => setDate(e.target.value)} className="w-full rounded-xl bg-muted px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring" />
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  variant="outline"
+                  className={cn(
+                    "w-full justify-start text-left font-normal rounded-xl bg-muted border-0 px-3 py-2.5 h-auto text-sm hover:bg-muted",
+                    !date && "text-muted-foreground"
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {date ? format(dateToLocal(date), 'PPP') : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0" align="start">
+                <Calendar
+                  mode="single"
+                  selected={date ? dateToLocal(date) : undefined}
+                  onSelect={(d) => d && setDate(localToIso(d))}
+                  initialFocus
+                  className={cn("p-3 pointer-events-auto")}
+                />
+              </PopoverContent>
+            </Popover>
 
             {type === 'expense' && (
               <select value={categoryId} onChange={e => setCategoryId(e.target.value)} className="w-full rounded-xl bg-muted px-3 py-2.5 text-sm outline-none focus:ring-2 focus:ring-ring">
