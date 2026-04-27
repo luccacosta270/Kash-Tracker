@@ -188,7 +188,27 @@ export function useCloudData(userId: string | undefined) {
     });
   }, [userId]);
 
-  return { data, updateData, loading, syncStatus };
+  const forceSave = useCallback(async () => {
+    if (!userId) {
+      toast.error("Hiss! You're not signed in. Can't save to cloud.");
+      return;
+    }
+    if (saveTimer.current) clearTimeout(saveTimer.current);
+    setSyncStatus('syncing');
+    try {
+      const current = dataRef.current;
+      await saveToCloud(userId, current);
+      lastSavedJson.current = JSON.stringify(current);
+      setSyncStatus('synced');
+      toast.success("Purr! Kash saved everything to the cloud. ☁️🐱");
+    } catch (err) {
+      console.error('Manual save error:', err);
+      setSyncStatus('error');
+      toast.error("Hiss! Couldn't save to the cloud. Try again.");
+    }
+  }, [userId]);
+
+  return { data, updateData, loading, syncStatus, forceSave };
 }
 
 async function saveToCloud(userId: string, data: AppData) {
