@@ -26,6 +26,11 @@ export function useCloudData(userId: string | undefined) {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>('synced');
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
   const lastSavedJson = useRef('');
+  const dataRef = useRef<AppData>(defaultData);
+
+  useEffect(() => {
+    dataRef.current = data;
+  }, [data]);
 
   // Load from cloud (with offline fallback)
   const loadFromCloud = useCallback(async () => {
