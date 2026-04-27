@@ -13,7 +13,7 @@ import { useCloudData, SyncStatus } from '@/hooks/useCloudData';
 
 const Index = () => {
   const { user, loading: authLoading, signOut } = useAuth();
-  const { data, updateData, loading: dataLoading, syncStatus } = useCloudData(user?.id);
+  const { data, updateData, loading: dataLoading, syncStatus, forceSave } = useCloudData(user?.id);
   const [page, setPage] = useState('home');
 
   // Dark mode
@@ -68,6 +68,7 @@ const Index = () => {
         onToggleTheme={() => setIsDark(!isDark)}
         syncStatus={syncStatus}
         onSignOut={signOut}
+        onManualSave={forceSave}
       />
       <div className="transition-opacity duration-200">
         {isViewingArchive && page !== 'profile' && page !== 'settings' ? (
