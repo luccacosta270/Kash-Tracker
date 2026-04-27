@@ -1,4 +1,4 @@
-import { Moon, Sun, Cloud, LogOut } from 'lucide-react';
+import { Moon, Sun, Cloud, LogOut, Save } from 'lucide-react';
 import kashCool from '@/assets/kash-cool.png';
 import { SyncStatus } from '@/hooks/useCloudData';
 
@@ -8,6 +8,7 @@ interface HeaderProps {
   onToggleTheme: () => void;
   syncStatus?: SyncStatus;
   onSignOut?: () => void;
+  onManualSave?: () => void;
 }
 
 function getGreeting(): string {
@@ -17,7 +18,7 @@ function getGreeting(): string {
   return 'Good evening';
 }
 
-export default function Header({ userName, isDark, onToggleTheme, syncStatus = 'synced', onSignOut }: HeaderProps) {
+export default function Header({ userName, isDark, onToggleTheme, syncStatus = 'synced', onSignOut, onManualSave }: HeaderProps) {
   return (
     <header className="sticky top-0 z-40 bg-background/90 backdrop-blur-md border-b border-border px-4 pt-5 pb-3">
       <div className="flex items-center justify-between max-w-lg mx-auto">
@@ -36,6 +37,17 @@ export default function Header({ userName, isDark, onToggleTheme, syncStatus = '
             syncStatus === 'error' ? 'text-orange-400' :
             'text-muted-foreground opacity-50'
           }`} />
+          {onManualSave && (
+            <button
+              onClick={onManualSave}
+              disabled={syncStatus === 'syncing'}
+              className="rounded-full p-2 text-savings hover:bg-savings/10 transition-colors touch-target disabled:opacity-50"
+              aria-label="Save now"
+              title="Save now"
+            >
+              <Save className="h-4 w-4" />
+            </button>
+          )}
           <button
             onClick={onToggleTheme}
             className="rounded-full p-2 text-muted-foreground hover:text-foreground hover:bg-muted transition-colors touch-target"
