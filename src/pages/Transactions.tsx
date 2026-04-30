@@ -88,7 +88,24 @@ export default function Transactions({ data, updateData }: TransactionsProps) {
   };
 
   const deleteTransaction = (id: string) => {
-    updateData(d => ({ ...d, transactions: d.transactions.filter(t => t.id !== id) }));
+    updateData(d => {
+      const target = d.transactions.find(t => t.id === id);
+      if (!target) return d;
+      const cat = d.categories.find(c => c.id === target.categoryId);
+      const isAutoLoggable = !!cat && (cat.isFixed || !!cat.isSavings);
+      const monthKey = target.date.slice(0, 7);
+      const sig = `${target.categoryId}|${target.description.trim().toLowerCase()}`;
+      const prevMap = d.deletedAutoLogs || {};
+      const prevList = prevMap[monthKey] || [];
+      const nextMap = isAutoLoggable && !prevList.includes(sig)
+        ? { ...prevMap, [monthKey]: [...prevList, sig] }
+        : prevMap;
+      return {
+        ...d,
+        transactions: d.transactions.filter(t => t.id !== id),
+        deletedAutoLogs: nextMap,
+      };
+    });
   };
 
   const startEdit = (t: Transaction) => {

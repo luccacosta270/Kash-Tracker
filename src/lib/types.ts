@@ -40,6 +40,10 @@ export interface AutoLoggedSummary {
   names: string[];
 }
 
+/** Map of monthKey -> set of "categoryId|normalizedDescription" signatures
+ *  that the user explicitly deleted, so prefill won't re-inject them. */
+export type DeletedAutoLogs = Record<string, string[]>;
+
 export type InsightCategory = 'smart' | 'stocks' | 'savings' | 'coach' | 'summary' | 'funny';
 export type InsightRefresh = 'daily' | 'open' | 'weekly';
 export type InsightLength = 'short' | 'detailed';
@@ -71,6 +75,8 @@ export interface AppData {
   viewingMonth: string | null;
   lastAutoLogged: AutoLoggedSummary | null;
   insightPreferences: InsightPreferences;
+  /** Auto-logged fixed/savings transactions the user removed; keyed by monthKey. */
+  deletedAutoLogs?: DeletedAutoLogs;
 }
 
 export type KashState = 'welcome' | 'happy' | 'cool' | 'alert' | 'newmonth' | 'darkmode';

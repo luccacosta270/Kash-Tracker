@@ -16,6 +16,7 @@ const defaultData: AppData = {
   viewingMonth: null,
   lastAutoLogged: null,
   insightPreferences: DEFAULT_INSIGHT_PREFS,
+  deletedAutoLogs: {},
 };
 
 export type SyncStatus = 'synced' | 'syncing' | 'error';
@@ -100,6 +101,7 @@ export function useCloudData(userId: string | undefined) {
           ...DEFAULT_INSIGHT_PREFS,
           ...((settingsRes.data as any)?.insight_preferences as Partial<InsightPreferences> | undefined),
         },
+        deletedAutoLogs: ((settingsRes.data as any)?.deleted_auto_logs as Record<string, string[]> | undefined) || {},
       };
 
       // If cloud is empty, check localStorage for migration
@@ -279,5 +281,6 @@ async function saveToCloud(userId: string, data: AppData) {
     has_seen_welcome: data.hasSeenWelcome,
     last_auto_logged: data.lastAutoLogged as any,
     insight_preferences: data.insightPreferences as any,
+    deleted_auto_logs: (data.deletedAutoLogs || {}) as any,
   } as any, { onConflict: 'user_id' });
 }
