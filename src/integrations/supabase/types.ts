@@ -17,6 +17,7 @@ export type Database = {
       app_settings: {
         Row: {
           created_at: string
+          deleted_auto_logs: Json
           has_seen_welcome: boolean
           id: string
           insight_preferences: Json
@@ -25,6 +26,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string
+          deleted_auto_logs?: Json
           has_seen_welcome?: boolean
           id?: string
           insight_preferences?: Json
@@ -33,6 +35,7 @@ export type Database = {
         }
         Update: {
           created_at?: string
+          deleted_auto_logs?: Json
           has_seen_welcome?: boolean
           id?: string
           insight_preferences?: Json
