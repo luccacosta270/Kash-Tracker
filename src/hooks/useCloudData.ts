@@ -28,6 +28,7 @@ export function useCloudData(userId: string | undefined) {
   const saveTimer = useRef<ReturnType<typeof setTimeout>>();
   const lastSavedJson = useRef('');
   const dataRef = useRef<AppData>(defaultData);
+  const hasLoadedRef = useRef(false);
 
   useEffect(() => {
     dataRef.current = data;
@@ -45,6 +46,7 @@ export function useCloudData(userId: string | undefined) {
           const filled = prefillFixedTransactions({ ...defaultData, ...parsed, viewingMonth: null });
           setData(filled);
           lastSavedJson.current = JSON.stringify(filled);
+          hasLoadedRef.current = true;
           setSyncStatus('error');
           toast.info("Meow! You're offline. Kash loaded your cached data. 🐱📦");
           setLoading(false);
@@ -136,9 +138,11 @@ export function useCloudData(userId: string | undefined) {
       const filled = prefillFixedTransactions(cloudData);
       setData(filled);
       lastSavedJson.current = JSON.stringify(filled);
+      hasLoadedRef.current = true;
     } catch (err) {
       console.error('Cloud load error:', err);
       setSyncStatus('error');
+      toast.error("Hiss! Kash couldn't load your data. Refresh before making changes so nothing gets overwritten.");
     } finally {
       setLoading(false);
     }
@@ -164,6 +168,12 @@ export function useCloudData(userId: string | undefined) {
       const next = updater(prev);
       // Also save to localStorage as fallback
       localStorage.setItem(STORAGE_KEY, JSON.stringify(next));
+
+      // Guard: never push to cloud until we've successfully loaded once.
+      // Prevents the empty default state from wiping the user's real data.
+      if (!hasLoadedRef.current) {
+        return next;
+      }
 
       if (saveTimer.current) clearTimeout(saveTimer.current);
       setSyncStatus('syncing');
@@ -193,6 +203,10 @@ export function useCloudData(userId: string | undefined) {
   const forceSave = useCallback(async () => {
     if (!userId) {
       toast.error("Hiss! You're not signed in. Can't save to cloud.");
+      return;
+    }
+    if (!hasLoadedRef.current) {
+      toast.error("Hiss! Kash hasn't loaded your data yet. Refresh first so we don't overwrite it.");
       return;
     }
     if (saveTimer.current) clearTimeout(saveTimer.current);
