@@ -46,6 +46,7 @@ export function useCloudData(userId: string | undefined) {
           const filled = prefillFixedTransactions({ ...defaultData, ...parsed, viewingMonth: null });
           setData(filled);
           lastSavedJson.current = JSON.stringify(filled);
+          hasLoadedRef.current = true;
           setSyncStatus('error');
           toast.info("Meow! You're offline. Kash loaded your cached data. 🐱📦");
           setLoading(false);
