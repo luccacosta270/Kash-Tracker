@@ -232,6 +232,15 @@ function formatPostgrestInList(values: string[]) {
   return `(${values.map(value => `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`).join(',')})`;
 }
 
+function uniqueByLocalId<T extends { local_id: string }>(rows: T[]) {
+  const seen = new Set<string>();
+  return rows.filter(row => {
+    if (seen.has(row.local_id)) return false;
+    seen.add(row.local_id);
+    return true;
+  });
+}
+
 async function assertSafeCategorySync(userId: string, data: AppData) {
   const categoryIds = new Set(data.categories.map(category => category.id));
   const transactionWithMissingCategory = data.transactions.find(transaction => !categoryIds.has(transaction.categoryId));
@@ -262,20 +271,35 @@ async function saveToCloud(userId: string, data: AppData) {
     name: data.profile.name,
   }, { onConflict: 'user_id' });
 
-  // Sync categories: upsert first, then delete removed rows.
-  // This prevents a failed insert from wiping the whole category list.
+  // Sync categories without deleting first. This prevents a failed insert from
+  // wiping the category list and avoids relying on DB unique constraints.
+  const { data: existingCategoryRows, error: existingCategoryError } = await supabase
+    .from('categories')
+    .select('id, local_id')
+    .eq('user_id', userId);
+
+  if (existingCategoryError) throw existingCategoryError;
+
+  const existingCategories = uniqueByLocalId(existingCategoryRows || []);
+  const existingCategoryIdsByLocalId = new Map(existingCategories.map(row => [row.local_id, row.id]));
+
   if (data.categories.length > 0) {
-    await supabase.from('categories').upsert(
-      data.categories.map(c => ({
+    await Promise.all(data.categories.map(async c => {
+      const payload = {
         user_id: userId,
         local_id: c.id,
         name: c.name,
         planned: c.planned,
         is_fixed: c.isFixed,
         is_savings: c.isSavings || false,
-      })),
-      { onConflict: 'user_id,local_id' },
-    ).throwOnError();
+      };
+      const existingId = existingCategoryIdsByLocalId.get(c.id);
+      if (existingId) {
+        await supabase.from('categories').update(payload).eq('id', existingId).throwOnError();
+      } else {
+        await supabase.from('categories').insert(payload).throwOnError();
+      }
+    }));
 
     await supabase
       .from('categories')
@@ -285,10 +309,20 @@ async function saveToCloud(userId: string, data: AppData) {
       .throwOnError();
   }
 
-  // Sync transactions: upsert first, then delete removed rows.
+  // Sync transactions without deleting first.
+  const { data: existingTransactionRows, error: existingTransactionError } = await supabase
+    .from('transactions')
+    .select('id, local_id')
+    .eq('user_id', userId);
+
+  if (existingTransactionError) throw existingTransactionError;
+
+  const existingTransactions = uniqueByLocalId(existingTransactionRows || []);
+  const existingTransactionIdsByLocalId = new Map(existingTransactions.map(row => [row.local_id, row.id]));
+
   if (data.transactions.length > 0) {
-    await supabase.from('transactions').upsert(
-      data.transactions.map(t => ({
+    await Promise.all(data.transactions.map(async t => {
+      const payload = {
         user_id: userId,
         local_id: t.id,
         date: t.date,
@@ -296,9 +330,14 @@ async function saveToCloud(userId: string, data: AppData) {
         description: t.description,
         amount: t.amount,
         type: t.type,
-      })),
-      { onConflict: 'user_id,local_id' },
-    ).throwOnError();
+      };
+      const existingId = existingTransactionIdsByLocalId.get(t.id);
+      if (existingId) {
+        await supabase.from('transactions').update(payload).eq('id', existingId).throwOnError();
+      } else {
+        await supabase.from('transactions').insert(payload).throwOnError();
+      }
+    }));
 
     await supabase
       .from('transactions')
