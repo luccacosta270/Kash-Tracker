@@ -138,6 +138,7 @@ export function useCloudData(userId: string | undefined) {
       const filled = prefillFixedTransactions(cloudData);
       setData(filled);
       lastSavedJson.current = JSON.stringify(filled);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(filled));
       hasLoadedRef.current = true;
     } catch (err) {
       console.error('Cloud load error:', err);
@@ -227,17 +228,44 @@ export function useCloudData(userId: string | undefined) {
   return { data, updateData, loading, syncStatus, forceSave };
 }
 
+function formatPostgrestInList(values: string[]) {
+  return `(${values.map(value => `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`).join(',')})`;
+}
+
+async function assertSafeCategorySync(userId: string, data: AppData) {
+  const categoryIds = new Set(data.categories.map(category => category.id));
+  const transactionWithMissingCategory = data.transactions.find(transaction => !categoryIds.has(transaction.categoryId));
+
+  if (transactionWithMissingCategory) {
+    throw new Error('Refusing to save transactions that point to missing categories.');
+  }
+
+  if (data.categories.length > 0) return;
+
+  const { count, error } = await supabase
+    .from('categories')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId);
+
+  if (error) throw error;
+  if ((count || 0) > 0 || data.transactions.length > 0) {
+    throw new Error('Refusing to overwrite saved categories with an empty category list.');
+  }
+}
+
 async function saveToCloud(userId: string, data: AppData) {
+  await assertSafeCategorySync(userId, data);
+
   // Upsert profile
   await supabase.from('profiles').upsert({
     user_id: userId,
     name: data.profile.name,
   }, { onConflict: 'user_id' });
 
-  // Sync categories: delete all, re-insert
-  await supabase.from('categories').delete().eq('user_id', userId);
+  // Sync categories: upsert first, then delete removed rows.
+  // This prevents a failed insert from wiping the whole category list.
   if (data.categories.length > 0) {
-    await supabase.from('categories').insert(
+    await supabase.from('categories').upsert(
       data.categories.map(c => ({
         user_id: userId,
         local_id: c.id,
@@ -245,14 +273,21 @@ async function saveToCloud(userId: string, data: AppData) {
         planned: c.planned,
         is_fixed: c.isFixed,
         is_savings: c.isSavings || false,
-      }))
-    );
+      })),
+      { onConflict: 'user_id,local_id' },
+    ).throwOnError();
+
+    await supabase
+      .from('categories')
+      .delete()
+      .eq('user_id', userId)
+      .not('local_id', 'in', formatPostgrestInList(data.categories.map(c => c.id)))
+      .throwOnError();
   }
 
-  // Sync transactions: delete all, re-insert
-  await supabase.from('transactions').delete().eq('user_id', userId);
+  // Sync transactions: upsert first, then delete removed rows.
   if (data.transactions.length > 0) {
-    await supabase.from('transactions').insert(
+    await supabase.from('transactions').upsert(
       data.transactions.map(t => ({
         user_id: userId,
         local_id: t.id,
@@ -261,8 +296,18 @@ async function saveToCloud(userId: string, data: AppData) {
         description: t.description,
         amount: t.amount,
         type: t.type,
-      }))
-    );
+      })),
+      { onConflict: 'user_id,local_id' },
+    ).throwOnError();
+
+    await supabase
+      .from('transactions')
+      .delete()
+      .eq('user_id', userId)
+      .not('local_id', 'in', formatPostgrestInList(data.transactions.map(t => t.id)))
+      .throwOnError();
+  } else {
+    await supabase.from('transactions').delete().eq('user_id', userId).throwOnError();
   }
 
   // Upsert savings goal
@@ -271,10 +316,9 @@ async function saveToCloud(userId: string, data: AppData) {
     monthly_target: data.savingsGoal.monthlyTarget,
   }, { onConflict: 'user_id' });
 
-  // Sync archives: delete all, re-insert
-  await supabase.from('archives').delete().eq('user_id', userId);
+  // Sync archives: upsert first, then delete removed rows.
   if (data.archives.length > 0) {
-    await supabase.from('archives').insert(
+    await supabase.from('archives').upsert(
       data.archives.map(a => ({
         user_id: userId,
         month_key: a.monthKey,
@@ -285,8 +329,18 @@ async function saveToCloud(userId: string, data: AppData) {
         total_income: a.totalIncome,
         total_expense: a.totalExpense,
         total_saved: a.totalSaved,
-      }))
-    );
+      })),
+      { onConflict: 'user_id,month_key' },
+    ).throwOnError();
+
+    await supabase
+      .from('archives')
+      .delete()
+      .eq('user_id', userId)
+      .not('month_key', 'in', formatPostgrestInList(data.archives.map(a => a.monthKey)))
+      .throwOnError();
+  } else {
+    await supabase.from('archives').delete().eq('user_id', userId).throwOnError();
   }
 
   // Upsert app settings
