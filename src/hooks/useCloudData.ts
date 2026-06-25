@@ -62,7 +62,11 @@ export function useCloudData(userId: string | undefined) {
         supabase.from('app_settings').select('*').eq('user_id', userId).single(),
       ]);
 
-      const categories: Category[] = (catsRes.data || []).map((c: any) => ({
+      if (catsRes.error) throw catsRes.error;
+      if (txnsRes.error) throw txnsRes.error;
+      if (archivesRes.error) throw archivesRes.error;
+
+      const categories: Category[] = uniqueByLocalId(catsRes.data || []).map((c: any) => ({
         id: c.local_id || c.id,
         name: c.name,
         planned: Number(c.planned),
@@ -269,7 +273,7 @@ async function saveToCloud(userId: string, data: AppData) {
   await supabase.from('profiles').upsert({
     user_id: userId,
     name: data.profile.name,
-  }, { onConflict: 'user_id' });
+  }, { onConflict: 'user_id' }).throwOnError();
 
   // Sync categories without deleting first. This prevents a failed insert from
   // wiping the category list and avoids relying on DB unique constraints.
@@ -353,7 +357,7 @@ async function saveToCloud(userId: string, data: AppData) {
   await supabase.from('savings_goals').upsert({
     user_id: userId,
     monthly_target: data.savingsGoal.monthlyTarget,
-  }, { onConflict: 'user_id' });
+  }, { onConflict: 'user_id' }).throwOnError();
 
   // Sync archives: upsert first, then delete removed rows.
   if (data.archives.length > 0) {
@@ -389,5 +393,5 @@ async function saveToCloud(userId: string, data: AppData) {
     last_auto_logged: data.lastAutoLogged as any,
     insight_preferences: data.insightPreferences as any,
     deleted_auto_logs: (data.deletedAutoLogs || {}) as any,
-  } as any, { onConflict: 'user_id' });
+  } as any, { onConflict: 'user_id' }).throwOnError();
 }
