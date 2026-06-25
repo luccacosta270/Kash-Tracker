@@ -62,7 +62,11 @@ export function useCloudData(userId: string | undefined) {
         supabase.from('app_settings').select('*').eq('user_id', userId).single(),
       ]);
 
-      const categories: Category[] = (catsRes.data || []).map((c: any) => ({
+      if (catsRes.error) throw catsRes.error;
+      if (txnsRes.error) throw txnsRes.error;
+      if (archivesRes.error) throw archivesRes.error;
+
+      const categories: Category[] = uniqueByLocalId(catsRes.data || []).map((c: any) => ({
         id: c.local_id || c.id,
         name: c.name,
         planned: Number(c.planned),
@@ -126,7 +130,8 @@ export function useCloudData(userId: string | undefined) {
               const filled = prefillFixedTransactions(migrated);
               setData(filled);
               lastSavedJson.current = JSON.stringify(filled);
-              localStorage.removeItem(STORAGE_KEY);
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(filled));
+              hasLoadedRef.current = true;
               toast.success("Meow! Kash moved your data to the cloud vault! ☁️🐱");
               setLoading(false);
               return;
@@ -138,6 +143,7 @@ export function useCloudData(userId: string | undefined) {
       const filled = prefillFixedTransactions(cloudData);
       setData(filled);
       lastSavedJson.current = JSON.stringify(filled);
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(filled));
       hasLoadedRef.current = true;
     } catch (err) {
       console.error('Cloud load error:', err);
@@ -227,33 +233,101 @@ export function useCloudData(userId: string | undefined) {
   return { data, updateData, loading, syncStatus, forceSave };
 }
 
+function formatPostgrestInList(values: string[]) {
+  return `(${values.map(value => `"${value.replace(/\\/g, '\\\\').replace(/"/g, '\\"')}"`).join(',')})`;
+}
+
+function uniqueByLocalId<T extends { local_id: string }>(rows: T[]) {
+  const seen = new Set<string>();
+  return rows.filter(row => {
+    if (seen.has(row.local_id)) return false;
+    seen.add(row.local_id);
+    return true;
+  });
+}
+
+async function assertSafeCategorySync(userId: string, data: AppData) {
+  const categoryIds = new Set(data.categories.map(category => category.id));
+  const transactionWithMissingCategory = data.transactions.find(transaction => !categoryIds.has(transaction.categoryId));
+
+  if (transactionWithMissingCategory) {
+    throw new Error('Refusing to save transactions that point to missing categories.');
+  }
+
+  if (data.categories.length > 0) return;
+
+  const { count, error } = await supabase
+    .from('categories')
+    .select('id', { count: 'exact', head: true })
+    .eq('user_id', userId);
+
+  if (error) throw error;
+  if ((count || 0) > 0 || data.transactions.length > 0) {
+    throw new Error('Refusing to overwrite saved categories with an empty category list.');
+  }
+}
+
 async function saveToCloud(userId: string, data: AppData) {
+  await assertSafeCategorySync(userId, data);
+
   // Upsert profile
   await supabase.from('profiles').upsert({
     user_id: userId,
     name: data.profile.name,
-  }, { onConflict: 'user_id' });
+  }, { onConflict: 'user_id' }).throwOnError();
 
-  // Sync categories: delete all, re-insert
-  await supabase.from('categories').delete().eq('user_id', userId);
+  // Sync categories without deleting first. This prevents a failed insert from
+  // wiping the category list and avoids relying on DB unique constraints.
+  const { data: existingCategoryRows, error: existingCategoryError } = await supabase
+    .from('categories')
+    .select('id, local_id')
+    .eq('user_id', userId);
+
+  if (existingCategoryError) throw existingCategoryError;
+
+  const existingCategories = uniqueByLocalId(existingCategoryRows || []);
+  const existingCategoryIdsByLocalId = new Map(existingCategories.map(row => [row.local_id, row.id]));
+
   if (data.categories.length > 0) {
-    await supabase.from('categories').insert(
-      data.categories.map(c => ({
+    await Promise.all(data.categories.map(async c => {
+      const payload = {
         user_id: userId,
         local_id: c.id,
         name: c.name,
         planned: c.planned,
         is_fixed: c.isFixed,
         is_savings: c.isSavings || false,
-      }))
-    );
+      };
+      const existingId = existingCategoryIdsByLocalId.get(c.id);
+      if (existingId) {
+        await supabase.from('categories').update(payload).eq('id', existingId).throwOnError();
+      } else {
+        await supabase.from('categories').insert(payload).throwOnError();
+      }
+    }));
+
+    await supabase
+      .from('categories')
+      .delete()
+      .eq('user_id', userId)
+      .not('local_id', 'in', formatPostgrestInList(data.categories.map(c => c.id)))
+      .throwOnError();
   }
 
-  // Sync transactions: delete all, re-insert
-  await supabase.from('transactions').delete().eq('user_id', userId);
+  // Sync transactions without deleting first.
+  const { data: existingTransactionRows, error: existingTransactionError } = await supabase
+    .from('transactions')
+    .select('id, local_id')
+    .eq('user_id', userId);
+
+  if (existingTransactionError) throw existingTransactionError;
+
+  const existingTransactions = uniqueByLocalId(existingTransactionRows || []);
+  const existingTransactionIdsByLocalId = new Map(existingTransactions.map(row => [row.local_id, row.id]));
+
   if (data.transactions.length > 0) {
-    await supabase.from('transactions').insert(
-      data.transactions.map(t => ({
+    await Promise.all(data.transactions.map(async t => {
+      const payload = {
         user_id: userId,
         local_id: t.id,
         date: t.date,
@@ -261,20 +335,34 @@ async function saveToCloud(userId: string, data: AppData) {
         description: t.description,
         amount: t.amount,
         type: t.type,
-      }))
-    );
+      };
+      const existingId = existingTransactionIdsByLocalId.get(t.id);
+      if (existingId) {
+        await supabase.from('transactions').update(payload).eq('id', existingId).throwOnError();
+      } else {
+        await supabase.from('transactions').insert(payload).throwOnError();
+      }
+    }));
+
+    await supabase
+      .from('transactions')
+      .delete()
+      .eq('user_id', userId)
+      .not('local_id', 'in', formatPostgrestInList(data.transactions.map(t => t.id)))
+      .throwOnError();
+  } else {
+    await supabase.from('transactions').delete().eq('user_id', userId).throwOnError();
   }
 
   // Upsert savings goal
   await supabase.from('savings_goals').upsert({
     user_id: userId,
     monthly_target: data.savingsGoal.monthlyTarget,
-  }, { onConflict: 'user_id' });
+  }, { onConflict: 'user_id' }).throwOnError();
 
-  // Sync archives: delete all, re-insert
-  await supabase.from('archives').delete().eq('user_id', userId);
+  // Sync archives: upsert first, then delete removed rows.
   if (data.archives.length > 0) {
-    await supabase.from('archives').insert(
+    await supabase.from('archives').upsert(
       data.archives.map(a => ({
         user_id: userId,
         month_key: a.monthKey,
@@ -285,8 +373,18 @@ async function saveToCloud(userId: string, data: AppData) {
         total_income: a.totalIncome,
         total_expense: a.totalExpense,
         total_saved: a.totalSaved,
-      }))
-    );
+      })),
+      { onConflict: 'user_id,month_key' },
+    ).throwOnError();
+
+    await supabase
+      .from('archives')
+      .delete()
+      .eq('user_id', userId)
+      .not('month_key', 'in', formatPostgrestInList(data.archives.map(a => a.monthKey)))
+      .throwOnError();
+  } else {
+    await supabase.from('archives').delete().eq('user_id', userId).throwOnError();
   }
 
   // Upsert app settings
@@ -296,5 +394,5 @@ async function saveToCloud(userId: string, data: AppData) {
     last_auto_logged: data.lastAutoLogged as any,
     insight_preferences: data.insightPreferences as any,
     deleted_auto_logs: (data.deletedAutoLogs || {}) as any,
-  } as any, { onConflict: 'user_id' });
+  } as any, { onConflict: 'user_id' }).throwOnError();
 }
