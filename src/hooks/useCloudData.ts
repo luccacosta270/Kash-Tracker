@@ -130,6 +130,8 @@ export function useCloudData(userId: string | undefined) {
               const filled = prefillFixedTransactions(migrated);
               setData(filled);
               lastSavedJson.current = JSON.stringify(filled);
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(filled));
+              hasLoadedRef.current = true;
               localStorage.removeItem(STORAGE_KEY);
               toast.success("Meow! Kash moved your data to the cloud vault! ☁️🐱");
               setLoading(false);
