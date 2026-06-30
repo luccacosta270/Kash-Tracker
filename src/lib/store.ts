@@ -178,16 +178,35 @@ export function generateId() {
 export function prefillFixedTransactions(data: AppData): AppData {
   const monthKey = getLiveMonthKey(data.transactions);
   const previousMonthKey = shiftMonthKey(monthKey, -1);
-  const previousMonthTransactions = data.transactions.filter(transaction => transaction.date.startsWith(previousMonthKey));
+  // First, collapse any duplicate fixed/savings auto-logs in the current month.
+  // Dedup key: same date + categoryId + normalized description + amount + type.
+  const fixedOrSavingsIds = new Set(
+    data.categories.filter(c => c.isFixed || c.isSavings).map(c => c.id),
+  );
+  const seenSigs = new Set<string>();
+  const dedupedTxns: Transaction[] = [];
+  for (const t of data.transactions) {
+    if (t.type === 'expense' && fixedOrSavingsIds.has(t.categoryId)) {
+      const sig = `${t.date}|${t.categoryId}|${t.description.trim().toLowerCase()}|${t.amount}`;
+      if (seenSigs.has(sig)) continue;
+      seenSigs.add(sig);
+    }
+    dedupedTxns.push(t);
+  }
+  const workingData = dedupedTxns.length !== data.transactions.length
+    ? { ...data, transactions: dedupedTxns }
+    : data;
+
+  const previousMonthTransactions = workingData.transactions.filter(transaction => transaction.date.startsWith(previousMonthKey));
   const archivedPreviousMonthTransactions = data.archives.find(archive => archive.monthKey === previousMonthKey)?.transactions || [];
   const sourceTransactions = previousMonthTransactions.length > 0 ? previousMonthTransactions : archivedPreviousMonthTransactions;
   const deletedForMonth = data.deletedAutoLogs?.[monthKey] || [];
-  const autoLoggedTransactions = buildAutoLoggedTransactions(data.categories, sourceTransactions, data.transactions, monthKey, deletedForMonth);
+  const autoLoggedTransactions = buildAutoLoggedTransactions(workingData.categories, sourceTransactions, workingData.transactions, monthKey, deletedForMonth);
 
   if (autoLoggedTransactions.length > 0) {
     return {
-      ...data,
-      transactions: [...data.transactions, ...autoLoggedTransactions],
+      ...workingData,
+      transactions: [...workingData.transactions, ...autoLoggedTransactions],
       lastAutoLogged: {
         monthKey,
         count: autoLoggedTransactions.length,
@@ -196,7 +215,7 @@ export function prefillFixedTransactions(data: AppData): AppData {
     };
   }
 
-  return data;
+  return workingData;
 }
 
 export function archiveMonth(data: AppData): { archived: AppData; monthLabel: string } {
