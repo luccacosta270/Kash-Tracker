@@ -198,7 +198,8 @@ export function useCloudData(userId: string | undefined) {
         } catch (err) {
           console.error('Cloud save error:', err);
           setSyncStatus('error');
-          toast.error("Hiss! Couldn't sync to the cloud. Data saved locally.");
+          const msg = err instanceof Error ? err.message : String(err);
+          toast.error(`Hiss! Couldn't sync to the cloud: ${msg}`);
         }
       }, 800);
 
@@ -226,7 +227,8 @@ export function useCloudData(userId: string | undefined) {
     } catch (err) {
       console.error('Manual save error:', err);
       setSyncStatus('error');
-      toast.error("Hiss! Couldn't save to the cloud. Try again.");
+      const msg = err instanceof Error ? err.message : String(err);
+      toast.error(`Hiss! Couldn't save to the cloud: ${msg}`);
     }
   }, [userId]);
 
